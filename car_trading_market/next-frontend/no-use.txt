@@ -1,0 +1,212 @@
+table name and colums 
+
+Model:
+    id
+	Make_id	Name	
+    timestamp
+
+Make: 
+    id	
+    name
+	logo	
+    timestamp	
+
+version:
+	id	
+    model_id	
+    year	
+    engine_type_id	
+    Make_id	CC	
+    transmssion_id
+
+version_feature:
+    id	
+    verison_id	
+    Feature_id	
+
+province:
+    id	
+    name
+    timestamp	
+
+cities:
+    id	
+    province_id	
+    name	
+    timestamp
+
+enginetype:
+    id	
+    name	
+    timestamp	
+
+features:
+    id	
+    name	
+    timestamp	
+
+seller_version_features:
+    id	
+    sell_car_id	
+    feature_id
+    timestamp	
+
+sell_car_media:
+    id	
+    sell_id	
+    media_path	
+    timestamp
+
+transmisison:
+    id
+    name    
+    timestamp
+
+new_car_media:
+   	id	
+    Model_id	
+    image	
+    timestamp
+    
+sell_car:
+    id	
+    version_id	
+    Make_id	
+    seller_city_id	
+    registered_city	
+    registered_province	
+    milage	
+    price	
+    desription	
+    Engine_type_id	
+    engine 
+    capacity	
+    transmission_type_id	
+    assemby_type	
+    seller_name	
+    seller_phone	
+    whatsapp_allowed	
+    secondary_number	
+    Status
+
+
+
+
+
+
+
+
+php artisan make:migration create_makes_table
+php artisan make:migration create_engine_types_table
+php artisan make:migration create_transmissions_table
+php artisan make:migration create_provinces_table
+php artisan make:migration create_cities_table
+php artisan make:migration create_models_table
+php artisan make:migration create_versions_table
+php artisan make:migration create_features_table
+php artisan make:migration create_version_features_table
+php artisan make:migration create_new_car_media_table
+php artisan make:migration create_sell_cars_table
+php artisan make:migration create_sell_car_media_table
+php artisan make:migration create_seller_version_features_table
+
+
+
+php artisan make:model Make -m
+php artisan make:model EngineType -m
+php artisan make:model Transmission -m
+php artisan make:model Province -m
+php artisan make:model City -m
+php artisan make:model CarModel -m
+php artisan make:model Version -m
+php artisan make:model Feature -m
+php artisan make:model VersionFeature -m
+php artisan make:model NewCarMedia -m
+php artisan make:model SellCar -m
+php artisan make:model SellCarMedia -m
+php artisan make:model SellerVersionFeature -m
+
+
+php artisan make:seeder MakeSeeder
+php artisan make:seeder ModelSeeder
+php artisan make:seeder VersionSeeder
+php artisan make:seeder ProvinceSeeder
+php artisan make:seeder CitySeeder
+php artisan make:seeder FeatureSeeder
+php artisan make:seeder VersionFeatureSeeder
+php artisan make:seeder NewCarMediaSeeder
+php artisan make:seeder SellCarSeeder
+php artisan make:seeder SellCarMediaSeeder
+php artisan make:seeder SellerVersionFeatureSeeder
+
+php artisan db:seed
+php artisan migrate:fresh --seed
+
+php artisan db:seed --class=CitySeeder
+
+php artisan make:controller MakeController
+php artisan make:controller ModelController
+php artisan make:controller VersionController
+php artisan make:controller FeatureController
+php artisan make:controller ProvinceController
+php artisan make:controller CityController
+php artisan make:controller SellCarController
+php artisan make:controller SellCarMediaController
+
+
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\CarController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\API\AdminCarController;
+use App\Http\Controllers\API\AdminUserController;
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
+Route::post('/signup', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+
+  // ALL-Cars
+    Route::get('/public/cars', [CarController::class, 'publicCars']);
+  // Public single car detail
+  Route::get('/public/cars/{id}', [CarController::class, 'publicShow']);
+/*
+|--------------------------------------------------------------------------
+| Protected Routes (Sanctum)
+|--------------------------------------------------------------------------
+*/
+
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/admin/cars', [AdminCarController::class, 'index']);
+    Route::put('/admin/cars/{id}/status', [AdminCarController::class, 'updateStatus']);
+
+    // Admin Users CRUD
+    Route::get('/admin/users', [AdminUserController::class, 'index']);
+    Route::post('/admin/users', [AdminUserController::class, 'store']);
+    Route::put('/admin/users/{id}', [AdminUserController::class, 'update']);
+    Route::delete('/admin/users/{id}', [AdminUserController::class, 'destroy']);
+     
+    // Auth
+    Route::post('/logout', [AuthController::class, 'logout']);
+    // User
+    Route::get('/user', [UserController::class, 'me']);
+    Route::put('/user', [UserController::class, 'update']);
+  
+    // Cars
+    Route::post('/cars', [CarController::class, 'store']);
+    Route::get('/my-cars', [CarController::class, 'myCars']);
+    Route::get('/cars/{id}', [CarController::class, 'show']);
+    Route::delete('/cars/{id}', [CarController::class, 'destroy']);
+    Route::put('/cars/{id}', [CarController::class, 'update']);
+    // Orders
+    Route::get('/orders', [OrderController::class, 'index']);
+});
