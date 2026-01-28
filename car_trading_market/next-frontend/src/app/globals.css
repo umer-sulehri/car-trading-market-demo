@@ -69,7 +69,7 @@ option {
 .car-modal-content {
   background-color: #fff;
   width: 100%;
-  max-width: 40rem;
+  max-width: 73rem;
   border-radius: 1rem;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
   max-height: 90vh; /* allow modal to occupy most of viewport */

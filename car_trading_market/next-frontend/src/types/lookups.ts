@@ -24,6 +24,7 @@ export interface Version {
   make?: Make;
   engineType?: { id: number; name: string };
   transmission?: { id: number; name: string };
+  features?: Feature[];
 }
 
 
@@ -44,5 +45,35 @@ export interface City {
   province_id: number;
 }
 export interface SellCarResponse {
-  id: number;
+  id?: number;
+  version_id?: number;
+  make_id?: number;
+  seller_city_id?: number;
+  registered_city?: string;
+  registered_province?: string;
+  mileage?: number;
+  price?: number;
+  engine_type_id?: number;
+  engine?: string;
+  capacity?: number;
+  transmission_id?: number;
+  assembly_type?: string;
+  seller_name?: string;
+  seller_phone?: string;
+  secondary_phone?: string;
+  whatsapp_allowed?: boolean;
+  description?: string;
+  year?: number;
+  version?: Version;
+  make?: Make;
+  city?: City;
+  engineType?: { id: number; name: string };
+  transmission?: { id: number; name: string };
+  media?: Array<{ id: number; url: string }>;
+  features?: Feature[];
+  user_id?: number;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  data?: any;
 }

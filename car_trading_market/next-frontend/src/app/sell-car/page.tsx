@@ -1,11 +1,12 @@
 "use client";
 
-import { createSellCar } from "@/src/services/sellCar.service";
+import { createSellCar, updateSellCar, getSellCarById } from "@/src/services/sellCar.service";
 import { uploadSellCarImage } from "@/src/services/sellCarMedia.service";
-import { getPublicMakes, getPublicModels, getPublicVersions, getPublicProvinces, getPublicCities, getPublicEngineTypes, getPublicTransmissions, getPublicFeatures } from "@/src/services/admin.lookup.service";
+import { getPublicMakes, getPublicModels, getPublicVersions, getPublicProvinces, getPublicCities, getPublicEngineTypes, getPublicTransmissions, getPublicFeatures, getPublicColors } from "@/src/services/admin.lookup.service";
 import { getUserProfile } from "@/src/services/user.service";
 import { Make, CarModel, Version, Province, City, Feature } from "@/src/types/lookups";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Navbar from "@/src/components/Navbar";
 import Footer from "@/src/components/Footer";
 import logo from "@/src/assets/images/logo.svg";
@@ -24,6 +25,7 @@ interface CarInfo {
 interface SellCarPayload {
   version_id: number | null;
   make_id: number | null;
+  color_id: number | null;
   seller_city_id: number | null;
   registered_city: string | null;
   registered_province: string;
@@ -66,7 +68,11 @@ export default function AddCarPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [showCarPopup, setShowCarPopup] = useState(false);
   const [step, setStep] = useState<number>(1);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const searchParams = useSearchParams();
+  const sellCarId = searchParams.get("id");
+  const isEditMode = !!sellCarId;
 
   // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -78,6 +84,7 @@ export default function AddCarPage() {
   const [versions, setVersions] = useState<Version[]>([]);
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [colors, setColors] = useState<{ id: number; name: string; hex_code: string }[]>([]);
   const [engineTypes, setEngineTypes] = useState<{ id: number; name: string }[]>([]);
   const [transmissions, setTransmissions] = useState<{ id: number; name: string }[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
@@ -86,6 +93,7 @@ export default function AddCarPage() {
   const [isLoadingMakes, setIsLoadingMakes] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+  const [isLoadingExistingCar, setIsLoadingExistingCar] = useState(false);
 
   const [carInfo, setCarInfo] = useState<CarInfo>({
     year: null,
@@ -95,6 +103,27 @@ export default function AddCarPage() {
     model_name: "",
     version_id: null,
     version_name: "",
+  });
+
+  // Form field states for controlled inputs
+  const [formData, setFormData] = useState({
+    mileage: "",
+    price: "",
+    color_id: "",
+    engine_type_id: "",
+    transmission_id: "",
+    assembly_type: "Local",
+    seller_city_id: "",
+    seller_province_id: "", // Add this for seller location
+    registered_province: "",
+    registered_city: "",
+    engine: "",
+    capacity: "",
+    description: "",
+    seller_name: "",
+    seller_phone: "",
+    secondary_phone: "",
+    whatsapp_allowed: false,
   });
 
   const STORAGE_KEY = "sellCarFormData";
@@ -111,8 +140,35 @@ export default function AddCarPage() {
     } else {
       // Fetch user data if authenticated
       fetchUserData();
+      // Load saved form data if user just logged in
+      loadFormDataFromStorage();
     }
-  }, []);
+
+    // Load existing sell car if in edit mode
+    if (isEditMode && sellCarId) {
+      loadExistingSellCar(parseInt(sellCarId));
+    }
+
+    // Check screen size
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 1024);
+    };
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, [isEditMode, sellCarId]);
+
+  // Auto-populate form when user logs in with saved data
+  useEffect(() => {
+    if (isAuthenticated) {
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        loadFormDataFromStorage();
+        alert("Your saved form data has been restored!");
+        console.log("Form data restored from storage after login");
+      }
+    }
+  }, [isAuthenticated]);
 
   const fetchUserData = async () => {
     try {
@@ -123,6 +179,71 @@ export default function AddCarPage() {
     }
   };
 
+  const loadExistingSellCar = async (id: number) => {
+    setIsLoadingExistingCar(true);
+    try {
+      const response = await getSellCarById(id);
+      const car = (response as any)?.data || response;
+
+      if (!car) {
+        console.error("No car data found");
+        return;
+      }
+
+      console.log("Loaded existing sell car:", car);
+
+      // Auto-fill car info
+      if (car.version) {
+        setCarInfo({
+          year: car.version?.year || car.year,
+          make_id: car.make_id,
+          make_name: car.make?.name || "",
+          model_id: car.version?.model_id,
+          model_name: car.version?.model?.name || "",
+          version_id: car.version_id,
+          version_name: car.version?.name || "",
+        });
+      }
+
+      // Auto-fill form data
+      setFormData({
+        mileage: car.mileage?.toString() || "",
+        price: car.price?.toString() || "",
+        color_id: car.color_id?.toString() || "",
+        engine_type_id: car.engine_type_id?.toString() || "",
+        transmission_id: car.transmission_id?.toString() || "",
+        assembly_type: car.assembly_type || "Local",
+        seller_city_id: car.seller_city_id?.toString() || "",
+        registered_province: car.registered_province || "",
+        registered_city: car.registered_city || "",
+        engine: car.engine || "",
+        capacity: car.capacity?.toString() || "",
+        description: car.description || "",
+        seller_name: car.seller_name || "",
+        seller_phone: car.seller_phone || "",
+        secondary_phone: car.secondary_phone || "",
+        whatsapp_allowed: car.whatsapp_allowed || false,
+      });
+
+      // Auto-fill selected features
+      if (car.features && Array.isArray(car.features)) {
+        const featureIds = car.features.map((f: any) => f.id);
+        setSelectedFeatures(featureIds);
+      }
+
+      // Load related models if make is selected
+      if (car.make_id) {
+        setIsLoadingModels(true);
+        const modelData = await getPublicModels(car.make_id);
+        setModels(modelData);
+        setIsLoadingModels(false);
+      }
+    } catch (error) {
+      console.error("Error loading existing sell car:", error);
+    } finally {
+      setIsLoadingExistingCar(false);
+    }
+  };
 
 /* ===================== LOCAL STORAGE FUNCTIONS ===================== */
   const saveFormDataToStorage = (formData: any) => {
@@ -140,6 +261,28 @@ export default function AddCarPage() {
         const data = JSON.parse(savedData);
         setCarInfo(data.carInfo || carInfo);
         setSelectedFeatures(data.selectedFeatures || []);
+        // Load form fields
+        if (data.formFields) {
+          setFormData(prevFormData => ({
+            ...prevFormData,
+            mileage: data.formFields.mileage || "",
+            price: data.formFields.price || "",
+            color_id: data.formFields.color_id || "",
+            engine_type_id: data.formFields.engine_type_id || "",
+            transmission_id: data.formFields.transmission_id || "",
+            assembly_type: data.formFields.assembly_type || "Local",
+            seller_city_id: data.formFields.seller_city_id || "",
+            registered_province: data.formFields.registered_province || "",
+            registered_city: data.formFields.registered_city || "",
+            engine: data.formFields.engine || "",
+            capacity: data.formFields.capacity || "",
+            description: data.formFields.description || "",
+            seller_name: data.formFields.seller_name || "",
+            seller_phone: data.formFields.seller_phone || "",
+            secondary_phone: data.formFields.secondary_phone || "",
+            whatsapp_allowed: data.formFields.whatsapp_allowed || false,
+          }));
+        }
       }
     } catch (error) {
       console.error("Error loading from local storage:", error);
@@ -199,18 +342,20 @@ export default function AddCarPage() {
 
   const fetchAllData = async () => {
     try {
-      const [provincesData, citiesData, engineTypesData, transmissionsData, featuresData] = await Promise.all([
+      const [provincesData, citiesData, engineTypesData, transmissionsData, featuresData, colorsData] = await Promise.all([
         getPublicProvinces(),
         getPublicCities(),
         getPublicEngineTypes(),
         getPublicTransmissions(),
         getPublicFeatures(),
+        getPublicColors(),
       ]);
       setProvinces(provincesData);
       setCities(citiesData);
       setEngineTypes(engineTypesData);
       setTransmissions(transmissionsData);
       setFeatures(featuresData);
+      setColors(colorsData);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -270,7 +415,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         return;
       }
 
-      if (images.length === 0) {
+      if (!isEditMode && images.length === 0) {
         alert("Please upload at least one image");
         setLoading(false);
         return;
@@ -292,9 +437,44 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         return;
       }
 
+      // Check if user is authenticated
+      if (!isAuthenticated) {
+        // Save form data and images to localStorage
+        const dataToSave = {
+          carInfo,
+          selectedFeatures,
+          formFields: {
+            mileage: formData.get("mileage"),
+            price: formData.get("price"),
+            color_id: formData.get("color_id"),
+            engine_type_id: formData.get("engine_type_id"),
+            transmission_id: formData.get("transmission_id"),
+            assembly_type: formData.get("assembly_type"),
+            seller_city_id: formData.get("seller_city_id"),
+            registered_province: formData.get("registered_province"),
+            registered_city: formData.get("registered_city"),
+            engine: formData.get("engine"),
+            capacity: formData.get("capacity"),
+            description: formData.get("description"),
+            seller_name: formData.get("seller_name"),
+            seller_phone: formData.get("seller_phone"),
+            secondary_phone: formData.get("secondary_phone"),
+            whatsapp_allowed: formData.get("whatsapp_allowed") === "on",
+          }
+        };
+        
+        saveFormDataToStorage(dataToSave);
+        
+        alert("Please login to continue. Your form data has been saved.");
+        window.location.href = "/auth/login?redirect=/sell-car";
+        setLoading(false);
+        return;
+      }
+
       const payload: SellCarPayload = {
         version_id: carInfo.version_id,
         make_id: carInfo.make_id,
+        color_id: formData.get("color_id") ? Number(formData.get("color_id")) : null,
         seller_city_id: Number(formData.get("seller_city_id")) || null,
         registered_city: (formData.get("registered_city") as string) || "",
         registered_province: (formData.get("registered_province") as string) || "",
@@ -313,38 +493,57 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         features: selectedFeatures.length > 0 ? selectedFeatures : undefined,
       };
 
-      // Step 1: Create sell car
-      const response = await createSellCar(payload);
-      const sellCarId = response?.data?.id || response?.id;
+      let sellCarIdToUse: number;
 
-      if (!sellCarId) {
-        alert("Failed to create car listing");
-        setLoading(false);
-        return;
-      }
+      // Step 1: Create or Update sell car
+      if (isEditMode && sellCarId) {
+        // Update existing sell car
+        const response = await updateSellCar(parseInt(sellCarId), payload);
+        sellCarIdToUse = response?.data?.id || parseInt(sellCarId);
+        console.log("Updated sell car:", response);
+      } else {
+        // Create new sell car
+        const response = await createSellCar(payload);
+        sellCarIdToUse = response?.data?.id || response?.id;
 
-      // Step 2: Upload images using SellCarMediaController
-      let uploadedCount = 0;
-      let uploadErrors: string[] = [];
-      
-      for (const file of images) {
-        try {
-          await uploadSellCarImage(sellCarId, file);
-          uploadedCount++;
-        } catch (imageErr: any) {
-          console.error(`Failed to upload image:`, imageErr);
-          const errorMsg = imageErr?.response?.data?.message || imageErr?.message || "Unknown error";
-          uploadErrors.push(`${file.name}: ${errorMsg}`);
+        if (!sellCarIdToUse) {
+          alert("Failed to create car listing");
+          setLoading(false);
+          return;
         }
       }
 
-      if (uploadedCount === 0 && uploadErrors.length > 0) {
-        alert(`Failed to upload images:\n${uploadErrors.join('\n')}`);
-        setLoading(false);
-        return;
+      // Step 2: Upload images using SellCarMediaController (only for new images)
+      if (images.length > 0) {
+        let uploadedCount = 0;
+        let uploadErrors: string[] = [];
+        
+        for (const file of images) {
+          try {
+            await uploadSellCarImage(sellCarIdToUse, file);
+            uploadedCount++;
+          } catch (imageErr: any) {
+            console.error(`Failed to upload image:`, imageErr);
+            const errorMsg = imageErr?.response?.data?.message || imageErr?.message || "Unknown error";
+            uploadErrors.push(`${file.name}: ${errorMsg}`);
+          }
+        }
+
+        if (uploadedCount === 0 && uploadErrors.length > 0) {
+          alert(`Failed to upload images:\n${uploadErrors.join('\n')}`);
+          setLoading(false);
+          return;
+        }
+
+        if (uploadedCount > 0) {
+          alert(`${isEditMode ? 'Updated' : 'Car listed'} successfully! Uploaded ${uploadedCount}/${images.length} image(s)${uploadErrors.length > 0 ? '\nFailed: ' + uploadErrors.join(', ') : ''}`);
+        }
+      } else if (!isEditMode) {
+        alert(`Car listed successfully!`);
+      } else {
+        alert(`Car updated successfully!`);
       }
 
-      alert(`Car listed successfully!  Uploaded ${uploadedCount}/${images.length} image(s)${uploadErrors.length > 0 ? '\nFailed: ' + uploadErrors.join(', ') : ''}`);
       form.reset();
       setImages([]);
       resetCarInfo();
@@ -353,7 +552,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       setCurrentStep(1);
     } catch (err: any) {
       console.error("Submission error:", err);
-      alert(err?.response?.data?.message || "Failed to create car listing");
+      alert(err?.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} car listing`);
     } finally {
       setLoading(false);
     }
@@ -375,10 +574,10 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="bg-white shadow-lg rounded-2xl mb-3 p-8 w-full max-w-full">
                     <div className="text-center mb-2">
                         <h1 className="text-4xl md:text-5xl font-semibold  text-blue-800 mb-4">
-                            Sell Your Car With 3 Easy & Simple Steps!
+                            {isEditMode ? 'Edit Your Car Listing' : 'Sell Your Car With 3 Easy & Simple Steps!'}
                         </h1>
                         <p className="text-lg text-gray-600 mb-6">
-                            It&apos;s free and takes less than a minute
+                            {isEditMode ? 'Update your car details and pricing' : 'It\'s free and takes less than a minute'}
                         </p>
                     
                     {/* Steps Progress */}
@@ -393,7 +592,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                             }`}>
                                 <s.icon className="w-6 h-6" />
                             </div>
-                            <span className="text-sm font-medium font-bold text-gray-700">{s.label}</span>
+                            <span className="text-sm font-bold text-gray-700">{s.label}</span>
                             </div>
                             {index < steps.length - 1 && (
                             <div className="w-24 h-1 mx-4 bg-gray-300" />
@@ -528,6 +727,11 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Registration Province *</label>
                         <select 
                         name="registered_province" 
+                        value={formData.registered_province}
+                        onChange={(e) => {
+                          const selectedProvince = e.target.value;
+                          setFormData({...formData, registered_province: selectedProvince, registered_city: ''})
+                        }}
                         required 
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                         >
@@ -541,30 +745,57 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Registration City *</label>
                         <select 
                         name="registered_city" 
+                        value={formData.registered_city}
+                        onChange={(e) => setFormData({...formData, registered_city: e.target.value})}
                         required
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                         >
                           <option value="">Select City</option>
-                          {cities.map(c => (
-                            <option key={c.id} value={c.name}>{c.name}</option>
-                          ))}
+                          {cities
+                            .filter(c => c.province?.name === formData.registered_province)
+                            .map(c => (
+                              <option key={c.id} value={c.name}>{c.name}</option>
+                            ))}
                         </select>
                     </div>
                     </div>
                     
                     <div className="grid md:grid-cols-1 gap-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Seller Province *</label>
+                        <select 
+                        value={formData.seller_province_id}
+                        onChange={(e) => setFormData({...formData, seller_province_id: e.target.value, seller_city_id: ''})}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        >
+                          <option value="">Select Seller Province</option>
+                          {provinces.map(p => (
+                            <option key={p.id} value={p.id.toString()}>{p.name}</option>
+                          ))}
+                        </select>
+                    </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Seller City *</label>
                         <select 
                         name="seller_city_id" 
+                        value={formData.seller_city_id}
+                        onChange={(e) => setFormData({...formData, seller_city_id: e.target.value})}
                         required
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                         >
                           <option value="">Select City</option>
-                          {cities.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
+                          {cities
+                            .filter(c => {
+                              if (!formData.seller_province_id) return false;
+                              return c.province_id === parseInt(formData.seller_province_id);
+                            })
+                            .map(c => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
                         </select>
+                    </div>
                     </div>
                     </div>
                 </div>
@@ -589,6 +820,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                             <input 
                             name="mileage" 
                             type="number"
+                            value={formData.mileage}
+                            onChange={(e) => setFormData({...formData, mileage: e.target.value})}
                             required 
                             placeholder="Mileage in kilometers" 
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -600,6 +833,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                             <input 
                             name="price" 
                             type="number"
+                            value={formData.price}
+                            onChange={(e) => setFormData({...formData, price: e.target.value})}
                             required 
                             placeholder="Price" 
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -614,6 +849,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Engine Type *</label>
                             <select 
                             name="engine_type_id" 
+                            value={formData.engine_type_id}
+                            onChange={(e) => setFormData({...formData, engine_type_id: e.target.value})}
                             required
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             >
@@ -625,15 +862,49 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                         </div>
 
                         <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Engine Name</label>
+                            <input 
+                            name="engine"
+                            type="text"
+                            value={formData.engine}
+                            onChange={(e) => setFormData({...formData, engine: e.target.value})}
+                            placeholder="e.g., V6, 4-Cylinder" 
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            />
+                        </div>
+
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4 mt-6">
+                    
+                        <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Transmission *</label>
                             <select 
                             name="transmission_id"
+                            value={formData.transmission_id}
+                            onChange={(e) => setFormData({...formData, transmission_id: e.target.value})}
                             required
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             >
                               <option value="">Select Transmission</option>
                               {transmissions.map(t => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Car Color *</label>
+                            <select 
+                            name="color_id"
+                            value={formData.color_id}
+                            onChange={(e) => setFormData({...formData, color_id: e.target.value})}
+                            required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            >
+                              <option value="">Select Car Color</option>
+                              {colors.map(color => (
+                                <option key={color.id} value={color.id}>{color.name}</option>
                               ))}
                             </select>
                         </div>
@@ -645,6 +916,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Assembly Type *</label>
                             <select
                             name="assembly_type"
+                            value={formData.assembly_type}
+                            onChange={(e) => setFormData({...formData, assembly_type: e.target.value})}
                             required
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             >
@@ -658,7 +931,9 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Engine Capacity (CC)</label>
                             <input 
                             name="capacity"
-                            type="number" 
+                            type="number"
+                            value={formData.capacity}
+                            onChange={(e) => setFormData({...formData, capacity: e.target.value})}
                             placeholder="e.g., 1500" 
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             />
@@ -701,6 +976,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                     <textarea
                         name="description"
                         rows={4}
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
                         placeholder="Describe your car's condition, features, maintenance history, etc."
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
                     />
@@ -780,6 +1057,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                         <input 
                         name="seller_name" 
+                        value={formData.seller_name}
+                        onChange={(e) => setFormData({...formData, seller_name: e.target.value})}
                         required
                         placeholder="John Doe" 
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -789,6 +1068,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
                         <input 
                         name="seller_phone" 
+                        value={formData.seller_phone}
+                        onChange={(e) => setFormData({...formData, seller_phone: e.target.value})}
                         required
                         placeholder="(123) 456-7890" 
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
@@ -798,6 +1079,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">Secondary Phone</label>
                         <input 
                         name="secondary_phone" 
+                        value={formData.secondary_phone}
+                        onChange={(e) => setFormData({...formData, secondary_phone: e.target.value})}
                         placeholder="Optional secondary phone" 
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                         />
@@ -807,6 +1090,8 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                         <input 
                             type="checkbox"
                             name="whatsapp_allowed"
+                            checked={formData.whatsapp_allowed}
+                            onChange={(e) => setFormData({...formData, whatsapp_allowed: e.target.checked})}
                             className="w-4 h-4"
                         />
                         Allow WhatsApp Contact
@@ -819,17 +1104,22 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                 {/* Submit Button */}
                 <button
                     type="submit"
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                    disabled={loading || isLoadingExistingCar}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {loading ? (
                     <>
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Submitting...
+                        {isEditMode ? 'Updating...' : 'Submitting...'}
+                    </>
+                    ) : isLoadingExistingCar ? (
+                    <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Loading...
                     </>
                     ) : (
                     <>
-                        {isAuthenticated ? 'Publish Your Listing' : 'Publish Now'}
+                        {isEditMode ? 'Update Listing' : (isAuthenticated ? 'Publish Your Listing' : 'Publish Now')}
                         <ChevronRight className="w-5 h-5" />
                     </>
                     )}
@@ -845,132 +1135,370 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 {showCarPopup && (
   <div className="car-modal-overlay">
     <div className="car-modal-content">
-      {/* Header */}
-      <div className="flex justify-between items-center border-b border-gray-200 p-6">
-        <div>
-          <h3 className="text-2xl font-semibold text-gray-900">
-            Select Car Information
-          </h3>
-          <p className="text-sm text-gray-500">
-            Step {step} of 4 • {step === 1 ? "Year" : step === 2 ? "Make" : step === 3 ? "Model" : "Version"}
-          </p>
-        </div>
-        <button
-          onClick={() => setShowCarPopup(false)}
-          className="w-10 h-10 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
-        >
-          ✕
-        </button>
-      </div>
+      {/* Small Screen: Step-by-Step Design */}
+      {isSmallScreen ? (
+        <>
+          {/* Header */}
+          <div className="flex justify-between items-center border-b border-gray-200 p-6">
+            <div>
+              <h3 className="text-2xl font-semibold text-gray-900">
+                Select Car Information
+              </h3>
+              <p className="text-sm text-gray-500">
+                Step {step} of 4 • {step === 1 ? "Year" : step === 2 ? "Make" : step === 3 ? "Model" : "Version"}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCarPopup(false)}
+              className="w-10 h-10 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            >
+              ✕
+            </button>
+          </div>
 
-      {/* Body */}
-      <div className="car-modal-body p-6">
-        {step === 1 && (
-          <StepGrid
-            title="Select Model Year"
-            subtitle="Choose the manufacturing year of your car"
-            data={YEARS}
-           onSelect={(v: number) => {
-  setCarInfo({
-    year: v,
-    make_id: null,
-    make_name: "",
-    model_id: null,
-    model_name: "",
-    version_id: null,
-    version_name: "",
-  });
-  setStep(2);
-}}
-
-
-          />
-        )}
-         {step === 2 && (
+          {/* Body - Step by Step */}
+          <div className="car-modal-body p-6">
+            {step === 1 && (
+              <StepGrid
+                title="Select Model Year"
+                subtitle="Choose the manufacturing year of your car"
+                data={YEARS}
+                onSelect={(v: number) => {
+                  setCarInfo({
+                    year: v,
+                    make_id: null,
+                    make_name: "",
+                    model_id: null,
+                    model_name: "",
+                    version_id: null,
+                    version_name: "",
+                  });
+                  setStep(2);
+                }}
+              />
+            )}
+            {step === 2 && (
+              <StepGrid
+                title="Select Make"
+                subtitle="Choose the brand of your car"
+                data={makes}
+                onBack={() => setStep(1)}
+                isMakeStep={true}
+                onSelect={async (make: Make) => {
+                  setCarInfo(prev => ({ ...prev, make_id: make.id, make_name: make.name, model_id: null, model_name: "", version_id: null, version_name: "" }));
+                  setIsLoadingModels(true);
+                  const modelData = await getPublicModels(make.id);
+                  setModels(modelData);
+                  setIsLoadingModels(false);
+                  setStep(3);
+                }}
+              />
+            )}
+            {step === 3 && (
+              isLoadingModels ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="ml-3 text-gray-600">Loading models...</span>
+                </div>
+              ) : (
                 <StepGrid
-                  title="Select Make"
-                  subtitle="Choose the brand of your car"
-                  data={makes}
-                  onBack={() => setStep(1)}
-                  onSelect={async (make: Make) => {
-                    setCarInfo(prev => ({ ...prev, make_id: make.id, make_name: make.name, model_id: null, model_name: "", version_id: null, version_name: "" }));
-                    setIsLoadingModels(true);
-                    const modelData = await getPublicModels(make.id);
-                    setModels(modelData);
-                    setIsLoadingModels(false);
-                    setStep(3);
+                  title="Select Model"
+                  subtitle="Choose your car model"
+                  data={models}
+                  onBack={() => setStep(2)}
+                  onSelect={async (model: CarModel) => {
+                    setCarInfo((prev) => ({
+                      ...prev,
+                      model_id: model.id,
+                      model_name: model.name,
+                      version_id: null,
+                      version_name: "",
+                    }));
+                    setIsLoadingVersions(true);
+                    const versionData = await getPublicVersions(model.id);
+                    setVersions(versionData);
+                    setIsLoadingVersions(false);
+                    setStep(4);
                   }}
                 />
+              )
+            )}
+            {step === 4 && (
+              isLoadingVersions ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="ml-3 text-gray-600">Loading versions...</span>
+                </div>
+              ) : (
+                <StepGrid
+                  title="Select Version"
+                  subtitle="Choose your car version"
+                  data={versions}
+                  onBack={() => setStep(3)}
+                  onSelect={(version: Version) => {
+                    setCarInfo((prev) => ({
+                      ...prev,
+                      version_id: version.id,
+                      version_name: version.name,
+                      year: version.year,
+                    }));
+                    setFormData((prev) => ({
+                      ...prev,
+                      engine_type_id: version.engine_type_id?.toString() || "",
+                      transmission_id: version.transmission_id?.toString() || "",
+                      capacity: version.cc?.toString() || "",
+                    }));
+                    if (version.features && Array.isArray(version.features)) {
+                      const featureIds = version.features.map((f: Feature) => f.id);
+                      setSelectedFeatures(featureIds);
+                    } else {
+                      setSelectedFeatures([]);
+                    }
+                    setShowCarPopup(false);
+                  }}
+                />
+              )
+            )}
+          </div>
+
+          {/* Footer Back Button */}
+          {step > 1 && (
+            <div className="border-t border-gray-200 p-6">
+              <button
+                onClick={() => setStep(step - 1)}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                ← Back
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Large Screen: Multi Column Layout */}
+          {/* Header */}
+          <div className="flex justify-between items-center border-b border-gray-200 p-6">
+            <div>
+              <h3 className="text-2xl font-semibold text-gray-900">
+                Select Your Car
+              </h3>
+              <p className="text-sm text-gray-500">
+                Choose Year, Make, Model & Version
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCarPopup(false)}
+              className="w-10 h-10 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Body - Multi Column Layout */}
+          <div className="car-modal-body p-6">
+            <div className="grid grid-cols-5 gap-4">
+              
+              {/* Column 1: Year Selection */}
+              <div className="flex flex-col">
+                <div className="mb-4">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-1">Year</h4>
+                  <p className="text-sm text-gray-600">Select year</p>
+                </div>
+                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                  {YEARS.map((year) => (
+                    <button
+                      key={year}
+                      onClick={() => {
+                        setCarInfo({
+                          year: year,
+                          make_id: null,
+                          make_name: "",
+                          model_id: null,
+                          model_name: "",
+                          version_id: null,
+                          version_name: "",
+                        });
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${
+                        carInfo.year === year
+                          ? 'border-blue-600 bg-blue-50 text-blue-900'
+                          : 'border-gray-200 hover:border-blue-400 text-gray-700'
+                      }`}
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Column 2: Make Selection */}
+              {carInfo.year && (
+                <div className="flex flex-col">
+                  <div className="mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Make</h4>
+                    <p className="text-sm text-gray-600">Select brand</p>
+                  </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                    {makes.map((make) => (
+                      <button
+                        key={make.id}
+                        onClick={async () => {
+                          setCarInfo(prev => ({ ...prev, make_id: make.id, make_name: make.name, model_id: null, model_name: "", version_id: null, version_name: "" }));
+                          setIsLoadingModels(true);
+                          const modelData = await getPublicModels(make.id);
+                          setModels(modelData);
+                          setIsLoadingModels(false);
+                        }}
+                        className={`w-full px-3 py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
+                          carInfo.make_id === make.id
+                            ? 'border-blue-600 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-400'
+                        }`}
+                      >
+                        {make.logo && (
+                          <img src={make.logo} alt={make.name} className="w-6 h-6 object-contain" />
+                        )}
+                        <span className={`font-medium text-sm ${carInfo.make_id === make.id ? 'text-blue-900' : 'text-gray-700'}`}>
+                          {make.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
 
-{step === 3 && (
-  isLoadingModels ? (
-    <div className="flex items-center justify-center py-8">
-      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      <span className="ml-3 text-gray-600">Loading models...</span>
-    </div>
-  ) : (
-    <StepGrid
-      title="Select Model"
-      subtitle="Choose your car model"
-      data={models}
-      onBack={() => setStep(2)}
-      onSelect={async (model: CarModel) => {
-        setCarInfo((prev) => ({
-          ...prev,
-          model_id: model.id,
-          model_name: model.name,
-          version_id: null,
-          version_name: "",
-          
-        }));
-        setIsLoadingVersions(true);
-        const versionData = await getPublicVersions(model.id);
-        setVersions(versionData);
-        setIsLoadingVersions(false);
-        setStep(4);
-      }}
-    />
-  )
-)}
+              {/* Column 3: Model Selection */}
+              {carInfo.make_id && (
+                <div className="flex flex-col">
+                  <div className="mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Model</h4>
+                    <p className="text-sm text-gray-600">Select model</p>
+                  </div>
+                  {isLoadingModels ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                      {models.map((model) => (
+                        <button
+                          key={model.id}
+                          onClick={async () => {
+                            setCarInfo((prev) => ({
+                              ...prev,
+                              model_id: model.id,
+                              model_name: model.name,
+                              version_id: null,
+                              version_name: "",
+                            }));
+                            setIsLoadingVersions(true);
+                            const versionData = await getPublicVersions(model.id);
+                            setVersions(versionData);
+                            setIsLoadingVersions(false);
+                          }}
+                          className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${
+                            carInfo.model_id === model.id
+                              ? 'border-blue-600 bg-blue-50 text-blue-900'
+                              : 'border-gray-200 hover:border-blue-400 text-gray-700'
+                          }`}
+                        >
+                          {model.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
-{step === 4 && (
-  isLoadingVersions ? (
-    <div className="flex items-center justify-center py-8">
-      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-      <span className="ml-3 text-gray-600">Loading versions...</span>
-    </div>
-  ) : (
-    <StepGrid
-      title="Select Version"
-      subtitle="Choose your car version"
-      data={versions}
-      onBack={() => setStep(3)}
-      onSelect={(version: Version) => {
-        setCarInfo((prev) => ({
-          ...prev,
-          version_id: version.id,
-          version_name: version.name,
-          year: version.year,
-        }));
-        setShowCarPopup(false);
-      }}
-    />
-  )
-)}
+              {/* Column 4: Version Selection */}
+              {carInfo.model_id && (
+                <div className="flex flex-col">
+                  <div className="mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Version</h4>
+                    <p className="text-sm text-gray-600">Select version</p>
+                  </div>
+                  {isLoadingVersions ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                      {versions.map((version) => (
+                        <button
+                          key={version.id}
+                          onClick={() => {
+                            setCarInfo((prev) => ({
+                              ...prev,
+                              version_id: version.id,
+                              version_name: version.name,
+                              year: version.year,
+                            }));
+                            setFormData((prev) => ({
+                              ...prev,
+                              engine_type_id: version.engine_type_id?.toString() || "",
+                              transmission_id: version.transmission_id?.toString() || "",
+                              capacity: version.cc?.toString() || "",
+                            }));
+                            if (version.features && Array.isArray(version.features)) {
+                              const featureIds = version.features.map((f: Feature) => f.id);
+                              setSelectedFeatures(featureIds);
+                            } else {
+                              setSelectedFeatures([]);
+                            }
+                          }}
+                          className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${
+                            carInfo.version_id === version.id
+                              ? 'border-blue-600 bg-blue-50 text-blue-900'
+                              : 'border-gray-200 hover:border-blue-400 text-gray-700'
+                          }`}
+                        >
+                          <div>{version.name}</div>
+                          <div className="text-xs text-gray-600 font-normal">{version.cc} CC</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
-      </div>
-
-      {/* Footer Back Button */}
-      {step > 1 && (
-        <div className="border-t border-gray-200 p-6">
-          <button
-            onClick={() => setStep(step - 1)}
-            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            ← Back
-          </button>
-        </div>
+              {/* Column 5: Summary & Confirm */}
+              {carInfo.version_id && (
+                <div className="flex flex-col">
+                  <div className="mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Summary</h4>
+                    <p className="text-sm text-gray-600">Confirm</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-200 flex-grow flex flex-col">
+                    <div className="space-y-3 flex-grow">
+                      <div className="border-b border-blue-200 pb-2">
+                        <div className="text-xs text-gray-600 font-medium">YEAR</div>
+                        <div className="text-sm font-semibold text-gray-900">{carInfo.year}</div>
+                      </div>
+                      <div className="border-b border-blue-200 pb-2">
+                        <div className="text-xs text-gray-600 font-medium">MAKE</div>
+                        <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.make_name}</div>
+                      </div>
+                      <div className="border-b border-blue-200 pb-2">
+                        <div className="text-xs text-gray-600 font-medium">MODEL</div>
+                        <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.model_name}</div>
+                      </div>
+                      <div className="pb-2">
+                        <div className="text-xs text-gray-600 font-medium">VERSION</div>
+                        <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.version_name}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowCarPopup(false)}
+                      className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-2 rounded-lg font-semibold text-sm hover:from-blue-700 hover:to-blue-600 transition-all"
+                    >
+                      ✓ Confirm
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   </div>
@@ -981,15 +1509,22 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
   );
 }
 /* ===== Step Grid Component ===== */
-interface StepGridProps<T extends string | number> {
+interface StepGridProps<T = any> {
   title: string;
   subtitle?: string;
   data: T[];
   onSelect: (value: T) => void;
   onBack?: () => void;
+  isMakeStep?: boolean;
 }
 
-function StepGrid<T extends string | number>({ title, subtitle, data, onSelect }: StepGridProps<T>) {
+function StepGrid<T = any>({ title, subtitle, data, onSelect, isMakeStep = false }: StepGridProps<T>) {
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+  const handleImageError = (itemId: string) => {
+    setFailedImages(prev => new Set([...prev, itemId]));
+  };
+
   return (
     <>
       <div className="mb-6">
@@ -997,18 +1532,38 @@ function StepGrid<T extends string | number>({ title, subtitle, data, onSelect }
         {subtitle && <p className="text-gray-600 text-sm">{subtitle}</p>}
       </div>
 
-      <div className="flex flex-col space-y-3 overflow-y-auto max-h-[60vh] pr-2">
+      <div className={`${isMakeStep ? 'flex flex-row overflow-x-auto gap-4 pb-4' : 'flex flex-col space-y-3 overflow-y-auto max-h-[60vh] pr-2'}`}>
         {Array.isArray(data) && data.map((item: any) => {
           const displayText = typeof item === 'object' && item !== null && 'name' in item ? item.name : String(item);
+          const logoUrl = isMakeStep && item.logo ? item.logo : null;
+          const itemKey = String(item.id ?? item);
+          const imageFailed = failedImages.has(itemKey);
+          
           return (
             <button
-              key={String(item.id ?? item)}
+              key={itemKey}
               onClick={() => onSelect(item)}
-              className="w-full border-2 border-gray-200 rounded-xl p-4 text-left hover:border-blue-600 hover:bg-blue-50 hover:shadow-md transition-all active:scale-[0.98]"
+              className={`rounded-xl p-4 text-left hover:border-blue-600 hover:bg-blue-50 hover:shadow-md transition-all active:scale-[0.98] ${isMakeStep ? 'border-2 border-gray-200 flex flex-col items-center justify-center min-w-[200px] h-[180px] flex-shrink-0' : 'w-full border-2 border-gray-200'}`}
             >
-              <div className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors">
-                {displayText}
-              </div>
+              {logoUrl && !imageFailed ? (
+                <>
+                  <img
+                    src={logoUrl}
+                    alt={displayText}
+                    className="h-16 w-16 object-contain mb-3"
+                    onError={() => handleImageError(itemKey)}
+                  />
+                  <div className="text-center">
+                    <div className="text-base font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                      {displayText}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                  {displayText}
+                </div>
+              )}
             </button>
           );
         })}

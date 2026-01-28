@@ -36,6 +36,7 @@ export const API = {
     versions: "/admin/versions",
     features: "/admin/features",
     cities: "/admin/cities",
+    colors: "/admin/colors",
    // new lookups
     engineTypes: "/engine-types",
     transmissions: "/transmissions",

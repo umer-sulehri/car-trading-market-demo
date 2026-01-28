@@ -6,6 +6,18 @@ export const getMySellCars = () => {
   return apiClient.get("/my-sell-cars");
 };
 
+export const getMySellCar = (id: number) => {
+  return apiClient.get(`/sell-cars/${id}`);
+};
+
+export const updateMySellCar = (id: number, data: any) => {
+  return apiClient.put(`/sell-cars/${id}`, data);
+};
+
+export const deleteMySellCar = (id: number) => {
+  return apiClient.delete(`/sell-cars/${id}`);
+};
+
 /* =====================  SELL CARS ===================== */
 export const getAdminSellCars = () => {
   return apiClient.get("/admin/sell-cars");

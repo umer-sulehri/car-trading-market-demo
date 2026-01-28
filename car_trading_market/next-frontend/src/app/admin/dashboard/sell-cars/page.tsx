@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { getAdminSellCars, updateSellCarStatus } from "@/src/services/adminSellCar.service";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
 
+const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%23e5e7eb' width='300' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='16' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'%3ENo Image Available%3C/text%3E%3C/svg%3E";
+
 interface SellCar {
   id: number;
   make_id: number;
@@ -18,7 +20,7 @@ interface SellCar {
   user?: { name: string; email: string };
   make?: { name: string };
   version?: { name: string };
-  media?: { media_path: string }[];
+  media?: { image: string; media_path: string }[];
 }
 
 export default function AdminSellCarsPage() {
@@ -103,9 +105,12 @@ export default function AdminSellCarsPage() {
                 <div>
                   {car.media && car.media[0] ? (
                     <img
-                      src={`/storage/${car.media[0].media_path}`}
+                      src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.media[0].image || car.media[0].media_path}`}
                       alt={`${car.make?.name} ${car.version?.name}`}
                       className="w-full h-40 object-cover rounded-lg"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+                      }}
                     />
                   ) : (
                     <div className="w-full h-40 bg-gray-300 rounded-lg flex items-center justify-center">

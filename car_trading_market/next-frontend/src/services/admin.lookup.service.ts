@@ -95,6 +95,10 @@ export const getEngineTypes = (): Promise<{ id: number; name: string }[]> => GET
 /* ===================== TRANSMISSIONS ===================== */
 export const getTransmissions = (): Promise<{ id: number; name: string }[]> => GET(API.admin.transmissions);
 
+/* ===================== COLORS ===================== */
+export const getColors = (): Promise<{ id: number; name: string; hex_code: string }[]> =>
+  GET(API.admin.colors);
+
 /* ===================== VERSION FEATURES ===================== */
 export const getVersionFeatures = (versionId: number) =>
   GET<{ id: number; name: string }[]>(`${API.admin.versions}/${versionId}/features`);
@@ -105,12 +109,30 @@ export const updateVersionFeatures = (versionId: number, featureIds: number[]) =
 export const removeVersionFeature = (versionId: number, featureId: number) =>
   apiClient.delete(`${API.admin.versions}/${versionId}/features/${featureId}`);
 
+/* ===================== VERSION COLORS ===================== */
+export const getVersionColors = (versionId: number) =>
+  GET<{ id: number; name: string; hex_code: string }[]>(`${API.admin.versions}/${versionId}/colors`);
+
+export const updateVersionColors = (versionId: number, colorIds: number[]) =>
+  POST(`${API.admin.versions}/${versionId}/colors`, { color_ids: colorIds });
+
+export const removeVersionColor = (versionId: number, colorId: number) =>
+  apiClient.delete(`${API.admin.versions}/${versionId}/colors/${colorId}`);
+
 /* ===================== PUBLIC LOOKUPS ===================== */
 
 // Makes
 export const getPublicMakes = (): Promise<Make[]> => {
   return GET<any>("/makes").then((res) => {
-    return Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+    const makes = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+    
+    // Convert logo paths to full URLs
+    return makes.map((make: Make) => ({
+      ...make,
+      logo: make.logo 
+        ? `${process.env.NEXT_PUBLIC_STORAGE_URL}/${make.logo}`
+        : undefined
+    }));
   });
 };
 
@@ -139,6 +161,10 @@ export const getPublicEngineTypes = (): Promise<{ id: number; name: string }[]> 
 // Transmissions
 export const getPublicTransmissions = (): Promise<{ id: number; name: string }[]> =>
   GET("/transmissions");
+
+// Colors
+export const getPublicColors = (): Promise<{ id: number; name: string; hex_code: string }[]> =>
+  GET("/colors");
 
 // Provinces (optional)
 export const getPublicProvinces = (): Promise<Province[]> =>

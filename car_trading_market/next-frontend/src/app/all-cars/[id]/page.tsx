@@ -8,6 +8,7 @@ import Footer from "@/src/components/Footer";
 import apiClient from "@/src/lib/api/apiClient";
 import carDummy from "@/src/assets/images/car2.png";
 import logo from "@/src/assets/images/logo.svg";
+import { submitBuyerQuery } from "@/src/services/buyer.service";
 
 import {
   MapPin,
@@ -20,7 +21,8 @@ import {
   BadgeCheck,
   ChartBar,
   MessageSquare,
-  
+  Check,
+  AlertCircle,
 } from "lucide-react";
 
 export default function CarDetailsPage() {
@@ -272,40 +274,178 @@ const MessageBox = ({ car }: { car: any }) => {
 Please let me know if it's still available.
 Thanks`;
 
-  const [message, setMessage] = useState(defaultMessage);
+  const [formData, setFormData] = useState({
+    buyer_name: "",
+    buyer_email: "",
+    buyer_phone: "",
+    message: defaultMessage,
+    offer_price: "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (!formData.buyer_name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+    if (!formData.buyer_email.trim()) {
+      setError("Please enter your email");
+      return;
+    }
+    if (!formData.buyer_phone.trim()) {
+      setError("Please enter your phone number");
+      return;
+    }
+    if (!formData.message.trim()) {
+      setError("Please enter a message");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess(false);
+
+    try {
+      const payload = {
+        sell_car_id: car.id,
+        buyer_name: formData.buyer_name.trim(),
+        buyer_email: formData.buyer_email.trim(),
+        buyer_phone: formData.buyer_phone.trim(),
+        message: formData.message.trim(),
+        offer_price: formData.offer_price ? parseFloat(formData.offer_price) : undefined,
+      };
+
+      await submitBuyerQuery(payload);
+
+      // Reset form
+      setFormData({
+        buyer_name: "",
+        buyer_email: "",
+        buyer_phone: "",
+        message: defaultMessage,
+        offer_price: "",
+      });
+
+      setSuccess(true);
+
+      // Hide success message after 5 seconds
+      setTimeout(() => {
+        setSuccess(false);
+      }, 5000);
+    } catch (err: any) {
+      console.error("Error submitting buyer query:", err);
+      setError(
+        err.response?.data?.message ||
+          "Failed to send message. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-3 border rounded-xl p-4">
       <p className="font-semibold text-sm">Send Message to Seller</p>
 
-      {/* BUYER NAME */}
-      <input
-        type="text"
-        placeholder="Your Name"
-        className="w-full border rounded-lg  mb-3  px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-      />
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+          <Check size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-green-800">Success!</p>
+            <p className="text-xs text-green-700">
+              Your message has been sent to the seller. They will contact you soon.
+            </p>
+          </div>
+        </div>
+      )}
 
-      {/* MESSAGE */}
-      <textarea
-        rows={4}
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        className="w-full border rounded-lg px-3 mb-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-      />
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+          <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">{error}</p>
+        </div>
+      )}
 
-      {/* BUYER PRICE */}
-      <input
-        type="number"
-        placeholder="Your Offer Price (Optional)"
-        className="w-full border rounded-lg px-3 mb-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-      />
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* BUYER NAME */}
+        <input
+          type="text"
+          name="buyer_name"
+          value={formData.buyer_name}
+          onChange={handleInputChange}
+          placeholder="Your Name"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          disabled={loading}
+        />
 
-      <button
-        className="w-full bg-gradient-to-r from-blue-600 to-blue-500 
-        text-white py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"
-      >
-        Send Message
-      </button>
+        {/* BUYER EMAIL */}
+        <input
+          type="email"
+          name="buyer_email"
+          value={formData.buyer_email}
+          onChange={handleInputChange}
+          placeholder="Your Email"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          disabled={loading}
+        />
+
+        {/* BUYER PHONE */}
+        <input
+          type="tel"
+          name="buyer_phone"
+          value={formData.buyer_phone}
+          onChange={handleInputChange}
+          placeholder="Your Phone Number"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          disabled={loading}
+        />
+
+        {/* MESSAGE */}
+        <textarea
+          name="message"
+          rows={4}
+          value={formData.message}
+          onChange={handleInputChange}
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          disabled={loading}
+        />
+
+        {/* BUYER PRICE */}
+        <input
+          type="number"
+          name="offer_price"
+          value={formData.offer_price}
+          onChange={handleInputChange}
+          placeholder="Your Offer Price (Optional)"
+          className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+          disabled={loading}
+        />
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-500 
+          text-white py-2 rounded-lg text-sm font-medium hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? "Sending..." : "Send Message"}
+        </button>
+      </form>
     </div>
   );
 };

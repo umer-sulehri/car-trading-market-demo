@@ -7,6 +7,7 @@ import {
   CheckCircle,
   LogOut,
   MapPin,
+  Palette,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname , useRouter} from "next/navigation";
@@ -60,6 +61,7 @@ const AdminSidebar: React.FC = () => {
 <SidebarItem href="/admin/dashboard/features" icon={<ClipboardList />} label="Features" />
 <SidebarItem href="/admin/dashboard/cities" icon={<MapPin />} label="Cities" />
 <SidebarItem href="/admin/dashboard/VersionFeatures" icon={<MapPin />} label="VersionFeatures" />
+<SidebarItem href="/admin/dashboard/version-colors" icon={<Palette />} label="Version Colors" />
 
         <button
         onClick={handleLogout}
