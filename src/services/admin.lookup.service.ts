@@ -4,7 +4,7 @@ import { PUT } from "@/src/lib/api/put.service";
 import { POST } from "@/src/lib/api/post.service";
 import { API } from "@/src/lib/api/endpoints";
 
-import { Make, CarModel, Version, Feature, City, Province } from "@/src/types/lookups";
+import { Make, CarModel, Version, Feature, City, Province, FeatureType, Specification } from "@/src/types/lookups";
 
 /* ===================== MAKES ===================== */
 
@@ -65,16 +65,50 @@ export const createVersion = (data: {
 export const deleteVersion = (id: number) =>
   apiClient.delete(`${API.admin.versions}/${id}`);
 
+/* ===================== FEATURE TYPES ===================== */
+
+export const getFeatureTypes = (): Promise<{ id: number; name: string }[]> => GET(API.admin.featureTypes);
+
 /* ===================== FEATURES ===================== */
 export const getFeatures = (): Promise<Feature[]> =>
   GET<Feature[]>(API.admin.features);
 
 
-export const createFeature = (data: Feature) =>
+export const createFeature = (data: {  name: string;
+  car_feature_type_id: number;
+  is_visible: boolean;
+  value?: string; }) =>
   POST(API.admin.features, data);
 
 export const deleteFeature = (id: number) =>
   apiClient.delete(`${API.admin.features}/${id}`);
+
+/* ===================== SPECIFICATION TYPES ===================== */
+export const getSpecificationTypes = (): Promise<{ id: number; name: string }[]> => GET(API.admin.specificationTypes);
+
+/* ===================== SPECIFICATIONS ===================== */
+export const getSpecifications = (): Promise<Specification[]> =>
+  GET<Specification[]>(API.admin.specifications);
+
+export const createSpecification = (data: { name: string; car_specification_type_id: number }) =>
+  POST(API.admin.specifications, data);
+
+export const deleteSpecification = (id: number) =>
+  apiClient.delete(`${API.admin.specifications}/${id}`);
+/* ===================== VERSION SPECIFICATIONS ===================== */
+export const getVersionSpecifications = (versionId: number) =>
+  GET<{ specification_id: number; value: string; name: string; type: { id: number; name: string } }[]>(
+    `${API.admin.versions}/${versionId}/specifications`
+  );
+
+export const updateVersionSpecifications = (
+  versionId: number,
+  data: { specification_id: number; value: string }[]
+) =>
+  POST(`${API.admin.versions}/${versionId}/specifications`, { specifications: data });
+
+export const removeVersionSpecification = (versionId: number, specificationId: number) =>
+  apiClient.delete(`${API.admin.versions}/${versionId}/specifications/${specificationId}`);
 
 /* ===================== CITIES ===================== */
 export const getProvinces = (): Promise<Province[]> =>

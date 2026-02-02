@@ -1,6 +1,6 @@
 "use client";
 
-const brands = ["BMW", "Audi", "Mercedes", "SUV", "Luxury","BMW", "Audi", "Mercedes", "SUV", "Luxury","BMW", "Audi", "Mercedes", "SUV", "Luxury"] as const;
+const brands = ["BMW", "Audi", "Mercedes", "SUV", "Luxury", "Toyota", "Honda", "Suzuki"] as const;
 
 export default function PopularBrands() {
   return (
@@ -16,9 +16,9 @@ export default function PopularBrands() {
         </p>
 
         <div className="flex flex-wrap justify-center gap-4">
-          {brands.map((brand) => (
+          {brands.map((brand, index) => (
             <div
-              key={brand}
+              key={`${brand}-${index}`}
               className="px-6 py-3 bg-white/20 rounded-full shadow-md cursor-pointer hover:bg-white/40 transition-colors duration-300"
             >
               {brand}

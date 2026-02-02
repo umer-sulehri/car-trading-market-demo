@@ -81,6 +81,22 @@ export default function Sidebar() {
           isActive={pathname === "/sell-car"}
         />
 
+        <SidebarItem
+          href="/user/dashboard/my-favorite"
+          icon={<Heart size={18} />}
+          label="My Favorite"
+          isActive={pathname === "/my-favorite"}
+        />
+        <div className="px-3 my-4 border-t border-gray-200 pt-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase px-3">Buyer Queries</p>
+        </div>
+
+        <SidebarItem
+          href="/user/dashboard/buyer-queries"
+          icon={<Car size={18} />}
+          label="Queries"
+          isActive={pathname?.includes("/buyer-queries")}
+        />
         <div className="px-3 my-4 border-t border-gray-200 pt-4">
           <p className="text-xs font-semibold text-gray-400 uppercase px-3">Account</p>
         </div>

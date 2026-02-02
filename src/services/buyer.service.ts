@@ -44,6 +44,13 @@ export const getSellerQueries = () => {
 };
 
 /**
+ * Get buyer queries sent by authenticated user
+ */
+export const getBuyerSentQueries = () => {
+  return GET<any>(`/buyer-queries/sent`);
+};
+
+/**
  * Get buyer queries for a specific car
  */
 export const getCarQueries = (sellCarId: number) => {

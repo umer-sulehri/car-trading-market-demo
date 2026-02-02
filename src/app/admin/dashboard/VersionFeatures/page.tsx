@@ -7,7 +7,7 @@ import {
   getVersionFeatures,
   updateVersionFeatures,
 } from "@/src/services/admin.lookup.service";
-import { Version, Feature } from "@/src/types/lookups";
+import { Version, Feature, FeatureType } from "@/src/types/lookups";
 
 export default function VersionFeaturesPage() {
   const [versions, setVersions] = useState<Version[]>([]);
@@ -60,17 +60,33 @@ export default function VersionFeaturesPage() {
     }
   };
 
-  const assignedFeatures = features.filter(f => selectedFeatureIds.includes(f.id));
+  // Group features by type
+  const groupedFeatures: { type: FeatureType | null; features: Feature[] }[] = [];
+  const typesMap: { [key: string]: Feature[] } = {};
+
+  features.forEach((f) => {
+    const typeName = f.type?.name || "Uncategorized";
+    if (!typesMap[typeName]) typesMap[typeName] = [];
+    typesMap[typeName].push(f);
+  });
+
+  for (const key in typesMap) {
+    groupedFeatures.push({
+      type: features.find(f => f.type?.name === key)?.type || { id: 0, name: key },
+      features: typesMap[key],
+    });
+  }
 
   return (
-    <div className="bg-white p-4 rounded">
-      <h2 className="text-lg font-semibold mb-4">Assign Features to Versions</h2>
+    <div className="bg-white p-6 rounded shadow-md max-w-4xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6">Assign Features to Versions</h2>
 
-      <div className="mb-4">
+      {/* Version selector */}
+      <div className="mb-6">
         <select
           value={selectedVersionId ?? ""}
           onChange={(e) => setSelectedVersionId(Number(e.target.value))}
-          className="border p-2 rounded"
+          className="border p-2 rounded w-full md:w-1/2"
         >
           <option value="">Select Version</option>
           {versions.map((v) => (
@@ -81,42 +97,52 @@ export default function VersionFeaturesPage() {
         </select>
       </div>
 
-      {loading && <p className="mb-2 text-gray-500">Loading features...</p>}
+      {loading && <p className="mb-4 text-gray-500">Loading features...</p>}
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {features.map((f) => (
-          <label
-            key={f.id}
-            className={`border p-2 rounded cursor-pointer ${
-              selectedFeatureIds.includes(f.id) ? "bg-blue-600 text-white" : ""
-            }`}
-          >
-            <input
-              type="checkbox"
-              checked={selectedFeatureIds.includes(f.id)}
-              onChange={() => handleToggleFeature(f.id)}
-              className="mr-2"
-            />
-            {f.name}
-          </label>
-        ))}
-      </div>
+      {/* Features grouped by type */}
+      {groupedFeatures.map((group) => (
+        <div key={group.type?.id || group.type?.name} className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 border-b pb-1">{group.type?.name}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {group.features.map((f) => (
+              <label
+                key={f.id}
+                className={`flex items-center gap-2 p-2 border rounded cursor-pointer transition-colors ${
+                  selectedFeatureIds.includes(f.id) ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-100"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedFeatureIds.includes(f.id)}
+                  onChange={() => handleToggleFeature(f.id)}
+                  className="w-4 h-4"
+                />
+                <span>{f.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
 
+      {/* Save button */}
       <button
         onClick={handleSave}
-        className="bg-green-600 text-white px-4 py-2 rounded mb-4"
+        className="bg-green-600 text-white px-6 py-2 rounded mt-4 hover:bg-green-700 transition-colors disabled:opacity-50"
         disabled={loading}
       >
         Save Features
       </button>
 
-      <div className="mt-4">
+      {/* Assigned features */}
+      <div className="mt-6">
         <h3 className="text-md font-semibold mb-2">Currently Assigned Features:</h3>
-        {assignedFeatures.length > 0 ? (
+        {selectedFeatureIds.length > 0 ? (
           <ul className="list-disc list-inside">
-            {assignedFeatures.map((f) => (
-              <li key={f.id}>{f.name}</li>
-            ))}
+            {features
+              .filter(f => selectedFeatureIds.includes(f.id))
+              .map((f) => (
+                <li key={f.id}>{f.name}</li>
+              ))}
           </ul>
         ) : (
           <p className="text-gray-500">No features assigned yet.</p>

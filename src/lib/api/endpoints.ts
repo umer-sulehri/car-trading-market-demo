@@ -35,11 +35,16 @@ export const API = {
     models: "/admin/models",
     versions: "/admin/versions",
     features: "/admin/features",
+    specifications: "/admin/specifications", // NEW
     cities: "/admin/cities",
     colors: "/admin/colors",
    // new lookups
     engineTypes: "/engine-types",
     transmissions: "/transmissions",
+
+    featureTypes: "/feature-types",             // optional, can be fetched from FeatureController
+    specificationTypes: "/specification-types"  // optional, can be fetched from CarSpecificationController
+
   },
 
     /* ===================== SELL CARS ===================== */
@@ -56,5 +61,6 @@ export const API = {
     delete: (id: number) => `/sell-car-media/${id}`,
   },
 
+  
 
 };

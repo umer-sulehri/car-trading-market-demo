@@ -13,7 +13,10 @@ import {
   Paintbrush,
   ShieldCheck,
   Phone,
+  Heart,
 } from "lucide-react";
+import { addToFavorites, removeFromFavorites, checkIfFavorited } from "@/src/services/favorite.service";
+import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
 
 const DUMMY_IMAGE = carDummy;
 
@@ -42,6 +45,8 @@ const AllCars: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [priceFilter, setPriceFilter] = useState("");
+  const [favorited, setFavorited] = useState<Set<number>>(new Set());
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const CITY_LIST = ["Lahore", "Karachi", "Islamabad", "Rawalpindi"];
   const MAKE_LIST = ["Toyota", "Honda", "Suzuki", "Kia", "BMW"];
@@ -55,7 +60,24 @@ const AllCars: React.FC = () => {
 
   useEffect(() => {
     fetchApprovedCars();
+    loadFavorites();
   }, []);
+
+  const loadFavorites = async () => {
+    try {
+      const isAuth = await isUserAuthenticated();
+      setIsAuthenticated(isAuth);
+      
+      if (isAuth) {
+        // Load favorite cars for this user
+        const favorites = await checkIfFavorited(0); // Will be replaced with actual checks
+        // We'll check favorites as we render each car
+      }
+    } catch (error) {
+      console.error("Error loading favorites:", error);
+      setIsAuthenticated(false);
+    }
+  };
 
   const fetchApprovedCars = async () => {
     try {
@@ -127,6 +149,37 @@ const AllCars: React.FC = () => {
 
   const handleClick = (id: number) => {
     router.push(`/all-cars/${id}`);
+  };
+
+  const toggleFavorite = async (e: React.MouseEvent, carId: number) => {
+    e.stopPropagation();
+    
+    // Check authentication AGAIN right here (not just relying on state)
+    const isAuth = await isUserAuthenticated();
+    console.log("🔍 Favorite Button Clicked - Auth Check:", isAuth);
+    
+    if (!isAuth) {
+      console.log("❌ Not authenticated, redirecting to login");
+      router.push("/auth/login");
+      return;
+    }
+
+    try {
+      console.log("✅ Authenticated, proceeding with favorite toggle");
+      if (favorited.has(carId)) {
+        await removeFromFavorites(carId);
+        setFavorited(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(carId);
+          return newSet;
+        });
+      } else {
+        await addToFavorites(carId);
+        setFavorited(prev => new Set(prev).add(carId));
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
   };
 
   const clearFilters = () => {
@@ -202,8 +255,20 @@ const AllCars: React.FC = () => {
                     onClick={() => handleClick(car.id)}
                     className="bg-white rounded-2xl overflow-hidden 
                                shadow-sm hover:shadow-xl hover:-translate-y-1 
-                               transition-all cursor-pointer"
+                               transition-all cursor-pointer relative"
                   >
+                    {/* FAVORITE BUTTON */}
+                    <button
+                      onClick={(e) => toggleFavorite(e, car.id)}
+                      className="absolute top-3 right-3 z-10 p-2 rounded-full 
+                                 bg-white shadow-md hover:shadow-lg transition-all"
+                    >
+                      <Heart
+                        size={20}
+                        className={favorited.has(car.id) ? "fill-red-500 text-red-500" : "text-gray-400"}
+                      />
+                    </button>
+
                     {/* IMAGE */}
                     <div className="h-48 overflow-hidden">
                       <Image

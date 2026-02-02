@@ -4,6 +4,7 @@ import { createSellCar, updateSellCar, getSellCarById } from "@/src/services/sel
 import { uploadSellCarImage } from "@/src/services/sellCarMedia.service";
 import { getPublicMakes, getPublicModels, getPublicVersions, getPublicProvinces, getPublicCities, getPublicEngineTypes, getPublicTransmissions, getPublicFeatures, getPublicColors } from "@/src/services/admin.lookup.service";
 import { getUserProfile } from "@/src/services/user.service";
+import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
 import { Make, CarModel, Version, Province, City, Feature } from "@/src/types/lookups";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -131,23 +132,27 @@ export default function AddCarPage() {
 
   // Check authentication on mount
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    setIsAuthenticated(!!token);
+    const checkAuth = async () => {
+      const isAuth = await isUserAuthenticated();
+      setIsAuthenticated(isAuth);
 
-    // Load from local storage if not authenticated
-    if (!token) {
-      loadFormDataFromStorage();
-    } else {
-      // Fetch user data if authenticated
-      fetchUserData();
-      // Load saved form data if user just logged in
-      loadFormDataFromStorage();
-    }
+      // Load from local storage if not authenticated
+      if (!isAuth) {
+        loadFormDataFromStorage();
+      } else {
+        // Fetch user data if authenticated
+        fetchUserData();
+        // Load saved form data if user just logged in
+        loadFormDataFromStorage();
+      }
 
-    // Load existing sell car if in edit mode
-    if (isEditMode && sellCarId) {
-      loadExistingSellCar(parseInt(sellCarId));
-    }
+      // Load existing sell car if in edit mode
+      if (isEditMode && sellCarId) {
+        loadExistingSellCar(parseInt(sellCarId));
+      }
+    };
+
+    checkAuth();
 
     // Check screen size
     const checkScreenSize = () => {
@@ -941,33 +946,33 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
                     </div>
 
-
-
-                    <div className="grid md:grid-cols-1 gap-4 mt-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Features</label>
-                            <div className="border border-gray-300 rounded-lg p-4 max-h-48 overflow-y-auto">
-                              {features.map(f => (
-                                <label key={f.id} className="flex items-center gap-2 mb-2 cursor-pointer">
-                                  <input 
-                                    type="checkbox"
-                                    value={f.id}
-                                    checked={selectedFeatures.includes(f.id)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setSelectedFeatures([...selectedFeatures, f.id]);
-                                      } else {
-                                        setSelectedFeatures(selectedFeatures.filter(id => id !== f.id));
-                                      }
-                                    }}
-                                    className="w-4 h-4"
-                                  />
-                                  <span className="text-sm text-gray-700">{f.name}</span>
-                                </label>
-                              ))}
-                            </div>
-                        </div>
-                    </div>
+<div className="grid md:grid-cols-1 gap-4 mt-6">
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">Features</label>
+    <div className="border border-gray-300 rounded-lg p-4 max-h-48 overflow-y-auto">
+      {features
+        .filter(f => f.is_visible) // <-- Only show visible features
+        .map(f => (
+          <label key={f.id} className="flex items-center gap-2 mb-2 cursor-pointer">
+            <input 
+              type="checkbox"
+              value={f.id}
+              checked={selectedFeatures.includes(f.id)}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setSelectedFeatures([...selectedFeatures, f.id]);
+                } else {
+                  setSelectedFeatures(selectedFeatures.filter(id => id !== f.id));
+                }
+              }}
+              className="w-4 h-4"
+            />
+            <span className="text-sm text-gray-700">{f.name}</span>
+          </label>
+      ))}
+    </div>
+  </div>
+</div>
 
                     <input type="hidden" name="registered_province" value="Punjab" />
 

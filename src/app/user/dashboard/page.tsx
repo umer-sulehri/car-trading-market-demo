@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { getMySellCars } from "@/src/services/adminSellCar.service";
 import { getSellerQueries } from "@/src/services/buyer.service";
 import { getUserProfile, AppUser } from "@/src/services/user.service";
+import { getFavoriteCars, removeFromFavorites } from "@/src/services/favorite.service";
+import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
 import StatsCard from "./components/StatsCard";
+import Image from "next/image";
 import { 
   CheckCircle, Clock, XCircle, Plus, TrendingUp, Eye, AlertCircle,
-  DollarSign, Car, FileText, Settings, MessageSquare
+  DollarSign, Car, FileText, Settings, MessageSquare, Heart, Trash2, MapPin, Gauge
 } from "lucide-react";
 import Link from "next/link";
 
@@ -41,6 +44,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<AppUser | null>(null);
   const [sellCars, setSellCars] = useState<SellCar[]>([]);
   const [buyerQueries, setBuyerQueries] = useState<BuyerQuery[]>([]);
+  const [favoriteCars, setFavoriteCars] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,18 +53,29 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      const [userData, carsData, queriesData] = await Promise.all([
+      const [userData, carsData, queriesData, favsData] = await Promise.all([
         getUserProfile(),
         getMySellCars(),
-        getSellerQueries()
+        getSellerQueries(),
+        getFavoriteCars().catch(() => [])
       ]);
       setUser(userData);
       setSellCars(carsData?.data || carsData || []);
       setBuyerQueries(queriesData?.data || queriesData || []);
+      setFavoriteCars(Array.isArray(favsData) ? favsData : favsData?.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemoveFavorite = async (carId: number) => {
+    try {
+      await removeFromFavorites(carId);
+      setFavoriteCars(prevCars => prevCars.filter(car => car.id !== carId));
+    } catch (error) {
+      console.error("Error removing favorite:", error);
     }
   };
 
@@ -104,7 +119,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <StatsCard 
           title="Total Listings" 
           value={sellCars.length.toString()}
@@ -132,6 +147,13 @@ export default function DashboardPage() {
           icon={<MessageSquare className="w-6 h-6" />}
           bgColor="bg-purple-50"
           textColor="text-purple-600"
+        />
+        <StatsCard 
+          title="Favorite Cars" 
+          value={favoriteCars.length.toString()}
+          icon={<Heart className="w-6 h-6" />}
+          bgColor="bg-red-50"
+          textColor="text-red-600"
         />
       </div>
 
@@ -359,6 +381,91 @@ export default function DashboardPage() {
                   View Details
                 </Link>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Favorite Cars Section */}
+      {favoriteCars.length > 0 && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <Heart className="w-6 h-6 text-red-600" />
+              Your Favorite Cars
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {favoriteCars.map((car) => (
+              <Link
+                key={car.id}
+                href={`/all-cars/${car.id}`}
+                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden group"
+              >
+                {/* Image */}
+                <div className="relative h-48 bg-gray-200 overflow-hidden">
+                  {car.images && car.images.length > 0 ? (
+                    <Image
+                      src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.images[0]}`}
+                      alt={`${car.make?.name}`}
+                      fill
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-gray-500">No image</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleRemoveFavorite(car.id);
+                    }}
+                    className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:shadow-lg hover:bg-red-50 transition-all"
+                  >
+                    <Heart size={18} className="fill-red-500 text-red-500" />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-4 space-y-3">
+                  <div>
+                    <h3 className="font-semibold text-lg text-gray-900">
+                      {car.make?.name} {car.version?.model?.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 flex items-center gap-1">
+                      <MapPin size={14} /> {car.city?.name || "City"}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-bold text-blue-600">
+                      PKR {car.price?.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-500 flex items-center gap-1">
+                    <Gauge size={14} /> {car.mileage?.toLocaleString()} km
+                  </p>
+
+                  <div className="pt-2">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleRemoveFavorite(car.id);
+                      }}
+                      className="w-full px-3 py-2 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                    >
+                      <Trash2 size={16} />
+                      Remove from Favorites
+                    </button>
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         </div>

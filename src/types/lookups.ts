@@ -28,10 +28,30 @@ export interface Version {
 }
 
 
-export interface Feature {
+export interface FeatureType {
   id: number;
   name: string;
 }
+
+export interface Feature {
+  id: number;
+  name: string;
+  value?: string;
+  is_visible: boolean;
+  type?: FeatureType; // include type info
+}
+export interface SpecificationType {
+  id: number;
+  name: string;
+}
+export interface Specification {
+  id: number;
+  name: string;
+  value?: string;
+  type?: SpecificationType; // optional relation
+   is_visible?: boolean;
+}
+
 
 export interface Province {
   id: number;
