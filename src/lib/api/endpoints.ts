@@ -43,7 +43,9 @@ export const API = {
     transmissions: "/transmissions",
 
     featureTypes: "/feature-types",             // optional, can be fetched from FeatureController
-    specificationTypes: "/specification-types"  // optional, can be fetched from CarSpecificationController
+    specificationTypes: "/specification-types",  // optional, can be fetched from CarSpecificationController
+
+    newCarMedia: "/new-car-media",
 
   },
 

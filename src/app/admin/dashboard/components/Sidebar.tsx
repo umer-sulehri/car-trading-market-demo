@@ -55,9 +55,10 @@ const AdminSidebar: React.FC = () => {
           icon={<CheckCircle size={16} />}
           label="Manage Bookings"
         />
+        <SidebarItem href="/admin/dashboard/car-catalog" icon={<Car />} label="Car Catalog" />
         <SidebarItem href="/admin/dashboard/makes" icon={<Car />} label="Makes" />
-<SidebarItem href="/admin/dashboard/models" icon={<Car />} label="Models" />
-<SidebarItem href="/admin/dashboard/versions" icon={<Car />} label="Versions" />
+        <SidebarItem href="/admin/dashboard/models" icon={<Car />} label="Models" />
+        <SidebarItem href="/admin/dashboard/versions" icon={<Car />} label="Versions" />
 <SidebarItem href="/admin/dashboard/features" icon={<ClipboardList />} label="Features" />
 <SidebarItem href="/admin/dashboard/specifications" icon={<ClipboardList />} label="Specifications" />
 <SidebarItem href="/admin/dashboard/cities" icon={<MapPin />} label="Cities" />

@@ -9,6 +9,7 @@ export interface CarModel {
   name: string;
   make_id: number;
   make?: Make;
+    media?: Array<{ id: number; url: string }>; 
 }
 
 export interface Version {
