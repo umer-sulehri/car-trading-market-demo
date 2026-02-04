@@ -179,6 +179,7 @@ export default function NewCarsPage() {
           </div>
         )}
 
+
         <div className="max-w-7xl mx-auto px-6 py-8">
           {loading && (
             <div className="text-center py-20">
@@ -301,6 +302,7 @@ export default function NewCarsPage() {
               </div>
             </div>
           )}
+
 
           {viewStep === "details" && selectedVersion && !loading && (
             <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
