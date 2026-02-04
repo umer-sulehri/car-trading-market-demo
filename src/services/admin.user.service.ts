@@ -10,8 +10,9 @@ export interface AdminUser {
   role: "admin" | "user";
 }
 
-export const getAllUsers = () => {
-  return GET<AdminUser[]>("/admin/users");
+export const getAllUsers = async () => {
+  const res = await GET<any>("/admin/users");
+  return Array.isArray(res) ? res : (res?.data ?? []);
 };
 
 export const createUser = (data: {

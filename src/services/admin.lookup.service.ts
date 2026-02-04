@@ -35,7 +35,7 @@ export const getModels = async (): Promise<CarModel[]> => {
     ? await GET<any>(API.admin.models) // protected
     : await GET<any>("/models");       // public
 
-  return Array.isArray(res) ? res : res?.data ?? [];
+  return Array.isArray(res) ? res : (res?.data ?? []);
 };
 
 
@@ -130,8 +130,37 @@ export const getEngineTypes = (): Promise<{ id: number; name: string }[]> => GET
 export const getTransmissions = (): Promise<{ id: number; name: string }[]> => GET(API.admin.transmissions);
 
 /* ===================== COLORS ===================== */
-export const getColors = (): Promise<{ id: number; name: string; hex_code: string }[]> =>
-  GET(API.admin.colors);
+export const getColors = async (): Promise<{ id: number; name: string; hex_code: string }[]> => {
+  const res = await GET<any>(API.admin.colors);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+};
+
+export const createColor = (data: { name: string; hex_code: string }) =>
+  POST(API.admin.colors, data);
+
+export const updateColor = (id: number, data: { name: string; hex_code: string }) =>
+  PUT(`${API.admin.colors}/${id}`, data);
+
+export const deleteColor = (id: number) =>
+  apiClient.delete(`${API.admin.colors}/${id}`);
+
+/* ===================== BODY TYPES ===================== */
+export const getBodyTypes = async (): Promise<{ id: number; name: string; description?: string }[]> => {
+  const res = await GET<any>(API.admin.bodyTypes);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+};
+
+export const createBodyType = (data: { name: string; description?: string }) =>
+  POST(API.admin.bodyTypes, data);
+
+export const updateBodyType = (id: number, data: { name: string; description?: string }) =>
+  PUT(`${API.admin.bodyTypes}/${id}`, data);
+
+export const deleteBodyType = (id: number) =>
+  apiClient.delete(`${API.admin.bodyTypes}/${id}`);
+
+export const attachBodyTypesToModel = (modelId: number, bodyTypeIds: number[]) =>
+  POST(`${API.admin.models}/${modelId}/body-types`, { body_type_ids: bodyTypeIds });
 
 /* ===================== VERSION FEATURES ===================== */
 export const getVersionFeatures = (versionId: number) =>
@@ -154,6 +183,18 @@ export const removeVersionColor = (versionId: number, colorId: number) =>
   apiClient.delete(`${API.admin.versions}/${versionId}/colors/${colorId}`);
 
 /* ===================== PUBLIC LOOKUPS ===================== */
+
+// Public Version Details (no authentication required)
+export const getPublicVersionFeatures = (versionId: number) =>
+  GET<{ id: number; name: string }[]>(`/versions/${versionId}/features`);
+
+export const getPublicVersionColors = (versionId: number) =>
+  GET<{ id: number; name: string; hex_code: string }[]>(`/versions/${versionId}/colors`);
+
+export const getPublicVersionSpecifications = (versionId: number) =>
+  GET<{ specification_id: number; value: string; name: string; type: { id: number; name: string } }[]>(
+    `/versions/${versionId}/specifications`
+  );
 
 // Makes
 export const getPublicMakes = (): Promise<Make[]> => {
@@ -199,6 +240,14 @@ export const getPublicTransmissions = (): Promise<{ id: number; name: string }[]
 // Colors
 export const getPublicColors = (): Promise<{ id: number; name: string; hex_code: string }[]> =>
   GET("/colors");
+
+// Body Types
+export const getPublicBodyTypes = (modelId?: number): Promise<{ id: number; name: string; description?: string }[]> => {
+  const url = modelId ? `/body-types?model_id=${modelId}` : "/body-types";
+  return GET<any>(url).then((res) => {
+    return Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+  });
+};
 
 // Provinces (optional)
 export const getPublicProvinces = (): Promise<Province[]> =>

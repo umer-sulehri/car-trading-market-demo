@@ -248,6 +248,11 @@ export default function CarCatalogPage() {
                       Transmission: {version.transmission.name}
                     </p>
                   )}
+                  {version.bodyType && (
+                    <p className="text-sm text-gray-600 font-semibold text-blue-600">
+                      Body Type: {version.bodyType.name}
+                    </p>
+                  )}
                 </div>
               </button>
             ))}
@@ -327,6 +332,16 @@ export default function CarCatalogPage() {
                       </p>
                       <p className="text-xl font-bold text-gray-900 mt-1">
                         {selectedVersion.transmission.name}
+                      </p>
+                    </div>
+                  )}
+                  {selectedVersion.bodyType && (
+                    <div className="bg-blue-50 p-4 rounded border border-blue-200">
+                      <p className="text-gray-600 text-sm font-semibold">
+                        BODY TYPE
+                      </p>
+                      <p className="text-xl font-bold text-blue-600 mt-1">
+                        {selectedVersion.bodyType.name}
                       </p>
                     </div>
                   )}

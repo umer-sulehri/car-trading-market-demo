@@ -15,7 +15,7 @@ import {
   Phone,
   Heart,
 } from "lucide-react";
-import { addToFavorites, removeFromFavorites, checkIfFavorited } from "@/src/services/favorite.service";
+import { addToFavorites, removeFromFavorites, getFavoriteCars } from "@/src/services/favorite.service";
 import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
 
 const DUMMY_IMAGE = carDummy;
@@ -70,8 +70,13 @@ const AllCars: React.FC = () => {
       
       if (isAuth) {
         // Load favorite cars for this user
-        const favorites = await checkIfFavorited(0); // Will be replaced with actual checks
-        // We'll check favorites as we render each car
+        const favoriteCars = await getFavoriteCars();
+        const favoriteIds = new Set(
+          Array.isArray(favoriteCars) 
+            ? favoriteCars.map((car: any) => car.id) 
+            : (favoriteCars?.data || []).map((car: any) => car.id)
+        );
+        setFavorited(favoriteIds);
       }
     } catch (error) {
       console.error("Error loading favorites:", error);

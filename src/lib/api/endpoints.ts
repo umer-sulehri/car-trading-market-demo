@@ -30,20 +30,26 @@ export const API = {
     cars: "/admin/cars",
     // admin update car status approve/reject
     updateCarStatus: (id: number) => `/admin/cars/${id}/status`,
+    // admin versions list
+    versions: "/admin/versions",
+    // admin sell cars list
+    sellCars: "/admin/sell-cars",
+    // admin users list
+    users: "/admin/users",
   
     makes: "/admin/makes",
     models: "/admin/models",
-    versions: "/admin/versions",
     features: "/admin/features",
-    specifications: "/admin/specifications", // NEW
+    specifications: "/admin/specifications",
     cities: "/admin/cities",
     colors: "/admin/colors",
+    bodyTypes: "/admin/body-types",
    // new lookups
     engineTypes: "/engine-types",
     transmissions: "/transmissions",
 
-    featureTypes: "/feature-types",             // optional, can be fetched from FeatureController
-    specificationTypes: "/specification-types",  // optional, can be fetched from CarSpecificationController
+    featureTypes: "/feature-types",
+    specificationTypes: "/specification-types",
 
     newCarMedia: "/new-car-media",
 

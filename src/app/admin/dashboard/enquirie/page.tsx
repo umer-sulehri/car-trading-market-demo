@@ -25,7 +25,10 @@ const EnquiriePage: React.FC = () => {
   // Fetch all cars for admin
   useEffect(() => {
     getAllCars()
-      .then((res) => setCars(res))
+      .then((res) => {
+        const carsData = Array.isArray(res) ? res : (res?.data ?? []);
+        setCars(carsData);
+      })
       .catch((err) => console.error("Failed to fetch cars", err))
       .finally(() => setLoading(false));
   }, []);
@@ -50,12 +53,14 @@ const EnquiriePage: React.FC = () => {
 
   if (loading) return <p>Loading...</p>;
 
-  // Group cars by user
-  const carsByUser = cars.reduce<Record<number, AdminCar[]>>((acc, car) => {
-    if (!acc[car.user.id]) acc[car.user.id] = [];
-    acc[car.user.id].push(car);
-    return acc;
-  }, {});
+  // Filter out cars without user data and group remaining cars by user
+  const carsByUser = cars
+    .filter((car) => car.user && car.user.id)
+    .reduce<Record<number, AdminCar[]>>((acc, car) => {
+      if (!acc[car.user.id]) acc[car.user.id] = [];
+      acc[car.user.id].push(car);
+      return acc;
+    }, {});
 
   const toggleUser = (userId: number) => {
     setExpandedUsers((prev) => ({ ...prev, [userId]: !prev[userId] }));

@@ -25,8 +25,14 @@ export default function UserManagementPage() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const data = await getAllUsers();
-    setUsers(data);
+    try {
+      const data = await getAllUsers();
+      const usersData = Array.isArray(data) ? data : (data?.data ?? []);
+      setUsers(usersData);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+      setUsers([]);
+    }
     setLoading(false);
   };
 

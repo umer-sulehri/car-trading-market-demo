@@ -2,7 +2,7 @@
 
 import { createSellCar, updateSellCar, getSellCarById } from "@/src/services/sellCar.service";
 import { uploadSellCarImage } from "@/src/services/sellCarMedia.service";
-import { getPublicMakes, getPublicModels, getPublicVersions, getPublicProvinces, getPublicCities, getPublicEngineTypes, getPublicTransmissions, getPublicFeatures, getPublicColors } from "@/src/services/admin.lookup.service";
+import { getPublicMakes, getPublicModels, getPublicVersions, getPublicProvinces, getPublicCities, getPublicEngineTypes, getPublicTransmissions, getPublicFeatures, getPublicColors, getPublicBodyTypes } from "@/src/services/admin.lookup.service";
 import { getUserProfile } from "@/src/services/user.service";
 import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
 import { Make, CarModel, Version, Province, City, Feature } from "@/src/types/lookups";
@@ -27,6 +27,7 @@ interface SellCarPayload {
   version_id: number | null;
   make_id: number | null;
   color_id: number | null;
+  body_type_id: number | null;
   seller_city_id: number | null;
   registered_city: string | null;
   registered_province: string;
@@ -86,6 +87,7 @@ export default function AddCarPage() {
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [colors, setColors] = useState<{ id: number; name: string; hex_code: string }[]>([]);
+  const [bodyTypes, setBodyTypes] = useState<{ id: number; name: string }[]>([]);
   const [engineTypes, setEngineTypes] = useState<{ id: number; name: string }[]>([]);
   const [transmissions, setTransmissions] = useState<{ id: number; name: string }[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
@@ -111,6 +113,7 @@ export default function AddCarPage() {
     mileage: "",
     price: "",
     color_id: "",
+    body_type_id: "",
     engine_type_id: "",
     transmission_id: "",
     assembly_type: "Local",
@@ -215,6 +218,7 @@ export default function AddCarPage() {
         mileage: car.mileage?.toString() || "",
         price: car.price?.toString() || "",
         color_id: car.color_id?.toString() || "",
+        body_type_id: car.body_type_id?.toString() || "",
         engine_type_id: car.engine_type_id?.toString() || "",
         transmission_id: car.transmission_id?.toString() || "",
         assembly_type: car.assembly_type || "Local",
@@ -273,6 +277,7 @@ export default function AddCarPage() {
             mileage: data.formFields.mileage || "",
             price: data.formFields.price || "",
             color_id: data.formFields.color_id || "",
+            body_type_id: data.formFields.body_type_id || "",
             engine_type_id: data.formFields.engine_type_id || "",
             transmission_id: data.formFields.transmission_id || "",
             assembly_type: data.formFields.assembly_type || "Local",
@@ -347,13 +352,14 @@ export default function AddCarPage() {
 
   const fetchAllData = async () => {
     try {
-      const [provincesData, citiesData, engineTypesData, transmissionsData, featuresData, colorsData] = await Promise.all([
+      const [provincesData, citiesData, engineTypesData, transmissionsData, featuresData, colorsData, bodyTypesData] = await Promise.all([
         getPublicProvinces(),
         getPublicCities(),
         getPublicEngineTypes(),
         getPublicTransmissions(),
         getPublicFeatures(),
         getPublicColors(),
+        getPublicBodyTypes(),
       ]);
       setProvinces(provincesData);
       setCities(citiesData);
@@ -361,6 +367,7 @@ export default function AddCarPage() {
       setTransmissions(transmissionsData);
       setFeatures(featuresData);
       setColors(colorsData);
+      setBodyTypes(bodyTypesData);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -452,6 +459,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
             mileage: formData.get("mileage"),
             price: formData.get("price"),
             color_id: formData.get("color_id"),
+            body_type_id: formData.get("body_type_id"),
             engine_type_id: formData.get("engine_type_id"),
             transmission_id: formData.get("transmission_id"),
             assembly_type: formData.get("assembly_type"),
@@ -480,6 +488,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         version_id: carInfo.version_id,
         make_id: carInfo.make_id,
         color_id: formData.get("color_id") ? Number(formData.get("color_id")) : null,
+        body_type_id: formData.get("body_type_id") ? Number(formData.get("body_type_id")) : null,
         seller_city_id: Number(formData.get("seller_city_id")) || null,
         registered_city: (formData.get("registered_city") as string) || "",
         registered_province: (formData.get("registered_province") as string) || "",
@@ -914,6 +923,22 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                             </select>
                         </div>
 
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Body Type *</label>
+                            <select 
+                            name="body_type_id"
+                            value={formData.body_type_id}
+                            onChange={(e) => setFormData({...formData, body_type_id: e.target.value})}
+                            required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            >
+                              <option value="">Select Body Type</option>
+                              {bodyTypes.map(type => (
+                                <option key={type.id} value={type.id}>{type.name}</option>
+                              ))}
+                            </select>
+                        </div>
+
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-4 mt-6">
@@ -1220,8 +1245,12 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                       version_name: "",
                     }));
                     setIsLoadingVersions(true);
-                    const versionData = await getPublicVersions(model.id);
+                    const [versionData, bodyTypeData] = await Promise.all([
+                      getPublicVersions(model.id),
+                      getPublicBodyTypes(model.id),
+                    ]);
                     setVersions(versionData);
+                    setBodyTypes(bodyTypeData);
                     setIsLoadingVersions(false);
                     setStep(4);
                   }}

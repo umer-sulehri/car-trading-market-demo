@@ -58,14 +58,14 @@ const Navbar: FC = () => {
           ))}
 
           {/* Search */}
-          <div className="flex items-center bg-blue-50 rounded-full px-4 py-1 gap-2 border border-blue-100">
+          {/* <div className="flex items-center bg-blue-50 rounded-full px-4 py-1 gap-2 border border-blue-100">
             <input
               type="text"
               placeholder="Search cars..."
               className="bg-transparent outline-none text-gray-700 placeholder-gray-400 text-sm"
             />
             <Search className="text-blue-500" size={18} />
-          </div>
+          </div> */}
 
           {/* Auth Buttons */}
           {isLoggedIn ? (

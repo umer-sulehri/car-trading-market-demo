@@ -14,8 +14,14 @@ export interface AdminCar {
   };
 }
 
-export const getAllCars = () => {
-  return GET<AdminCar[]>(API.admin.cars); // This is fine
+export const getAllCars = async () => {
+  const res = await GET<any>(API.admin.cars);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+};
+
+export const getAllVersions = async () => {
+  const res = await GET<any>(API.admin.versions);
+  return Array.isArray(res) ? res : (res?.data ?? []);
 };
 
 // ✅ Corrected updateCarStatus using PUT service

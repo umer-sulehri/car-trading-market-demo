@@ -70,6 +70,7 @@ export const assets = {
 export const menuLinks = [
   { name: "Home", path: "/" },
   { name: "Browse Cars", path: "/all-cars" },
+  { name: "New Cars", path: "/new-cars" },
   { name: "Sell Your Car", path: "/sell-car" },
   
 ];
