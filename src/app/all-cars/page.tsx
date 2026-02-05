@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Phone,
   Heart,
+  ChevronDown,
 } from "lucide-react";
 import { addToFavorites, removeFromFavorites, getFavoriteCars } from "@/src/services/favorite.service";
 import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
@@ -25,10 +26,16 @@ interface SellCar {
   make?: { id: number; name: string };
   version?: { id: number; name: string; model?: { id: number; name: string } };
   city?: { id: number; name: string };
+  province?: { id: number; name: string };
   transmission?: { id: number; name: string };
   engineType?: { id: number; name: string };
+  color?: { id: number; name: string };
+  bodyType?: { id: number; name: string };
   mileage: number;
   price: number;
+  year?: number;
+  engine_capacity?: number;
+  registered_in?: string;
   seller_name: string;
   seller_phone: string;
   phone?: string;
@@ -45,17 +52,66 @@ const AllCars: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [priceFilter, setPriceFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState("");
+  const [provinceFilter, setProvinceFilter] = useState("");
+  const [makeFilter, setMakeFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  const [mileageFilter, setMileageFilter] = useState("");
+  const [transmissionFilter, setTransmissionFilter] = useState("");
+  const [colorFilter, setColorFilter] = useState("");
+  const [engineTypeFilter, setEngineTypeFilter] = useState("");
+  const [engineCapacityFilter, setEngineCapacityFilter] = useState("");
+  const [bodyTypeFilter, setBodyTypeFilter] = useState("");
+  const [registeredInFilter, setRegisteredInFilter] = useState("");
   const [favorited, setFavorited] = useState<Set<number>>(new Set());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
+    search: true,
+    make: true,
+    province: false,
+    city: false,
+    price: true,
+    year: false,
+    mileage: false,
+    registeredIn: false,
+    transmission: false,
+    color: false,
+    engineType: false,
+    engineCapacity: false,
+    bodyType: false,
+  });
+
   const CITY_LIST = ["Lahore", "Karachi", "Islamabad", "Rawalpindi"];
   const MAKE_LIST = ["Toyota", "Honda", "Suzuki", "Kia", "BMW"];
+  const PROVINCE_LIST = ["Punjab", "Sindh", "KPK", "Balochistan", "GB"];
+  const TRANSMISSION_LIST = ["Manual", "Automatic"];
+  const COLOR_LIST = ["White", "Black", "Silver", "Gray", "Red", "Blue", "Green", "Beige"];
+  const ENGINE_TYPE_LIST = ["Petrol", "Diesel", "Hybrid", "Electric"];
+  const ENGINE_CAPACITY_LIST = ["1000-1500", "1500-2000", "2000-2500", "2500+"];
+  const BODY_TYPE_LIST = ["Sedan", "SUV", "Hatchback", "Wagon", "Van", "Coupe", "Truck"];
+  const REGISTERED_IN_LIST = ["Pakistan", "Import", "Other"];
 
   const PRICE_RANGES = [
     { label: "Below 1M", value: "0-1000000" },
     { label: "1M - 2M", value: "1000000-2000000" },
     { label: "2M - 5M", value: "2000000-5000000" },
     { label: "Above 5M", value: "5000000+" },
+  ];
+
+  const YEAR_RANGES = [
+    { label: "2020 & Earlier", value: "0-2020" },
+    { label: "2021-2022", value: "2021-2022" },
+    { label: "2023-2024", value: "2023-2024" },
+    { label: "2025+", value: "2025-3000" },
+  ];
+
+  const MILEAGE_RANGES = [
+    { label: "Below 50K", value: "0-50000" },
+    { label: "50K-100K", value: "50000-100000" },
+    { label: "100K-150K", value: "100000-150000" },
+    { label: "Above 150K", value: "150000+" },
   ];
 
   useEffect(() => {
@@ -114,7 +170,21 @@ const AllCars: React.FC = () => {
     }
   };
 
-  const filterCars = (searchValue: string, priceValue: string) => {
+  const filterCars = (
+    searchValue: string,
+    priceValue: string,
+    cityValue: string,
+    provinceValue: string,
+    makeValue: string,
+    yearValue: string,
+    mileageValue: string,
+    transmissionValue: string,
+    colorValue: string,
+    engineTypeValue: string,
+    engineCapacityValue: string,
+    bodyTypeValue: string,
+    registeredInValue: string
+  ) => {
     let filtered = cars;
 
     if (searchValue) {
@@ -135,8 +205,90 @@ const AllCars: React.FC = () => {
       const [min, max] = priceValue.includes("+")
         ? [parseInt(priceValue), Infinity]
         : priceValue.split("-").map(Number);
-
       filtered = filtered.filter((car) => car.price >= min && car.price <= max);
+    }
+
+    if (cityValue) {
+      filtered = filtered.filter((car) => {
+        const carCity = typeof car.city === "string" ? car.city : car.city?.name || "";
+        return carCity.toLowerCase() === cityValue.toLowerCase();
+      });
+    }
+
+    if (provinceValue) {
+      filtered = filtered.filter((car) => {
+        const carProvince = typeof car.province === "string" ? car.province : car.province?.name || "";
+        return carProvince.toLowerCase() === provinceValue.toLowerCase();
+      });
+    }
+
+    if (makeValue) {
+      filtered = filtered.filter((car) => {
+        const carMake = typeof car.make === "string" ? car.make : car.make?.name || "";
+        return carMake.toLowerCase() === makeValue.toLowerCase();
+      });
+    }
+
+    if (yearValue) {
+      const [minYear, maxYear] = yearValue.includes("+")
+        ? [parseInt(yearValue), 3000]
+        : yearValue.split("-").map(Number);
+      filtered = filtered.filter((car) => {
+        const carYear = car.year || 0;
+        return carYear >= minYear && carYear <= maxYear;
+      });
+    }
+
+    if (mileageValue) {
+      const [minMileage, maxMileage] = mileageValue.includes("+")
+        ? [parseInt(mileageValue), Infinity]
+        : mileageValue.split("-").map(Number);
+      filtered = filtered.filter((car) => car.mileage >= minMileage && car.mileage <= maxMileage);
+    }
+
+    if (transmissionValue) {
+      filtered = filtered.filter((car) => {
+        const carTransmission = typeof car.transmission === "string" ? car.transmission : car.transmission?.name || "";
+        return carTransmission.toLowerCase() === transmissionValue.toLowerCase();
+      });
+    }
+
+    if (colorValue) {
+      filtered = filtered.filter((car) => {
+        const carColor = typeof car.color === "string" ? car.color : car.color?.name || "";
+        return carColor.toLowerCase() === colorValue.toLowerCase();
+      });
+    }
+
+    if (engineTypeValue) {
+      filtered = filtered.filter((car) => {
+        const carEngineType = typeof car.engineType === "string" ? car.engineType : car.engineType?.name || "";
+        return carEngineType.toLowerCase() === engineTypeValue.toLowerCase();
+      });
+    }
+
+    if (engineCapacityValue) {
+      const [min, max] = engineCapacityValue.includes("+")
+        ? [parseInt(engineCapacityValue), Infinity]
+        : engineCapacityValue.split("-").map(Number);
+      filtered = filtered.filter((car) => {
+        const capacity = car.engine_capacity || 0;
+        return capacity >= min && capacity <= max;
+      });
+    }
+
+    if (bodyTypeValue) {
+      filtered = filtered.filter((car) => {
+        const carBodyType = typeof car.bodyType === "string" ? car.bodyType : car.bodyType?.name || "";
+        return carBodyType.toLowerCase() === bodyTypeValue.toLowerCase();
+      });
+    }
+
+    if (registeredInValue) {
+      filtered = filtered.filter((car) => {
+        const carRegisteredIn = car.registered_in || "";
+        return carRegisteredIn.toLowerCase() === registeredInValue.toLowerCase();
+      });
     }
 
     setFilteredCars(filtered);
@@ -144,12 +296,67 @@ const AllCars: React.FC = () => {
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    filterCars(value, priceFilter);
+    filterCars(value, priceFilter, cityFilter, provinceFilter, makeFilter, yearFilter, mileageFilter, transmissionFilter, colorFilter, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
   };
 
   const handlePriceChange = (value: string) => {
     setPriceFilter(value);
-    filterCars(searchTerm, value);
+    filterCars(searchTerm, value, cityFilter, provinceFilter, makeFilter, yearFilter, mileageFilter, transmissionFilter, colorFilter, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleCityChange = (value: string) => {
+    setCityFilter(value);
+    filterCars(searchTerm, priceFilter, value, provinceFilter, makeFilter, yearFilter, mileageFilter, transmissionFilter, colorFilter, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleProvinceChange = (value: string) => {
+    setProvinceFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, value, makeFilter, yearFilter, mileageFilter, transmissionFilter, colorFilter, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleMakeChange = (value: string) => {
+    setMakeFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, provinceFilter, value, yearFilter, mileageFilter, transmissionFilter, colorFilter, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleYearChange = (value: string) => {
+    setYearFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, provinceFilter, makeFilter, value, mileageFilter, transmissionFilter, colorFilter, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleMileageChange = (value: string) => {
+    setMileageFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, provinceFilter, makeFilter, yearFilter, value, transmissionFilter, colorFilter, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleTransmissionChange = (value: string) => {
+    setTransmissionFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, provinceFilter, makeFilter, yearFilter, mileageFilter, value, colorFilter, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleColorChange = (value: string) => {
+    setColorFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, provinceFilter, makeFilter, yearFilter, mileageFilter, transmissionFilter, value, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleEngineTypeChange = (value: string) => {
+    setEngineTypeFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, provinceFilter, makeFilter, yearFilter, mileageFilter, transmissionFilter, colorFilter, value, engineCapacityFilter, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleEngineCapacityChange = (value: string) => {
+    setEngineCapacityFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, provinceFilter, makeFilter, yearFilter, mileageFilter, transmissionFilter, colorFilter, engineTypeFilter, value, bodyTypeFilter, registeredInFilter);
+  };
+
+  const handleBodyTypeChange = (value: string) => {
+    setBodyTypeFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, provinceFilter, makeFilter, yearFilter, mileageFilter, transmissionFilter, colorFilter, engineTypeFilter, engineCapacityFilter, value, registeredInFilter);
+  };
+
+  const handleRegisteredInChange = (value: string) => {
+    setRegisteredInFilter(value);
+    filterCars(searchTerm, priceFilter, cityFilter, provinceFilter, makeFilter, yearFilter, mileageFilter, transmissionFilter, colorFilter, engineTypeFilter, engineCapacityFilter, bodyTypeFilter, value);
   };
 
   const handleClick = (id: number) => {
@@ -190,7 +397,25 @@ const AllCars: React.FC = () => {
   const clearFilters = () => {
     setSearchTerm("");
     setPriceFilter("");
+    setCityFilter("");
+    setProvinceFilter("");
+    setMakeFilter("");
+    setYearFilter("");
+    setMileageFilter("");
+    setTransmissionFilter("");
+    setColorFilter("");
+    setEngineTypeFilter("");
+    setEngineCapacityFilter("");
+    setBodyTypeFilter("");
+    setRegisteredInFilter("");
     setFilteredCars(cars);
+  };
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   return (
@@ -201,40 +426,405 @@ const AllCars: React.FC = () => {
         <div className="max-w-7xl mx-auto flex gap-8 mt-16">
 
           {/* ================= FILTER SIDEBAR ================= */}
-          <aside className="w-72 bg-white p-6 rounded-2xl shadow-sm h-fit sticky top-24">
+          <aside className="w-72 bg-white p-6 rounded-2xl shadow-sm h-fit sticky top-24 overflow-y-auto max-h-[calc(100vh-120px)]">
             <h3 className="text-lg font-semibold mb-6">Filter Cars</h3>
-{/* SEARCH */}
-<div className="mb-5">
-  <label className="text-sm text-gray-500">Search</label>
-  <input
-    type="text"
-    placeholder="Search by make, model, city"
-    value={searchTerm}
-    onChange={(e) => handleSearchChange(e.target.value)}
-    className="w-full mt-1 border rounded-xl px-4 py-2 text-sm
-               focus:ring-2 focus:ring-blue-500 transition"
-  />
-</div>
 
-
-
-
-            {/* PRICE */}
-            <div className="mb-6">
-              <label className="text-sm text-gray-500">Price Range</label>
-              <select
-                value={priceFilter}
-                onChange={(e) => handlePriceChange(e.target.value)}
-                className="w-full mt-1 border rounded-xl px-4 py-2 text-sm 
-                           focus:ring-2 focus:ring-blue-500 transition"
+            {/* SEARCH */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("search")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
               >
-                <option value="">Any Price</option>
-                {PRICE_RANGES.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+                <span className="text-sm font-semibold text-gray-700">Search</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.search ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.search && (
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    placeholder="Search by make, model, city"
+                    value={searchTerm}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* MAKE */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("make")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Make</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.make ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.make && (
+                <div className="mt-2">
+                  <select
+                    value={makeFilter}
+                    onChange={(e) => handleMakeChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">All Makes</option>
+                    {MAKE_LIST.map((make) => (
+                      <option key={make} value={make}>
+                        {make}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* PROVINCE */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("province")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Province</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.province ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.province && (
+                <div className="mt-2">
+                  <select
+                    value={provinceFilter}
+                    onChange={(e) => handleProvinceChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">All Provinces</option>
+                    {PROVINCE_LIST.map((province) => (
+                      <option key={province} value={province}>
+                        {province}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* CITY */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("city")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">City</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.city ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.city && (
+                <div className="mt-2">
+                  <select
+                    value={cityFilter}
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">All Cities</option>
+                    {CITY_LIST.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* PRICE RANGE */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("price")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Price Range</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.price ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.price && (
+                <div className="mt-2">
+                  <select
+                    value={priceFilter}
+                    onChange={(e) => handlePriceChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">Any Price</option>
+                    {PRICE_RANGES.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* YEAR */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("year")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Year</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.year ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.year && (
+                <div className="mt-2">
+                  <select
+                    value={yearFilter}
+                    onChange={(e) => handleYearChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">Any Year</option>
+                    {YEAR_RANGES.map((y) => (
+                      <option key={y.value} value={y.value}>
+                        {y.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* MILEAGE */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("mileage")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Mileage (Km)</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.mileage ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.mileage && (
+                <div className="mt-2">
+                  <select
+                    value={mileageFilter}
+                    onChange={(e) => handleMileageChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">Any Mileage</option>
+                    {MILEAGE_RANGES.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* REGISTERED IN */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("registeredIn")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Registered In</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.registeredIn ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.registeredIn && (
+                <div className="mt-2">
+                  <select
+                    value={registeredInFilter}
+                    onChange={(e) => handleRegisteredInChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">Any Registration</option>
+                    {REGISTERED_IN_LIST.map((reg) => (
+                      <option key={reg} value={reg}>
+                        {reg}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* TRANSMISSION */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("transmission")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Transmission</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.transmission ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.transmission && (
+                <div className="mt-2">
+                  <select
+                    value={transmissionFilter}
+                    onChange={(e) => handleTransmissionChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">Any Transmission</option>
+                    {TRANSMISSION_LIST.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* COLOR */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("color")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Color</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.color ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.color && (
+                <div className="mt-2">
+                  <select
+                    value={colorFilter}
+                    onChange={(e) => handleColorChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">Any Color</option>
+                    {COLOR_LIST.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* ENGINE TYPE */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("engineType")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Engine Type</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.engineType ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.engineType && (
+                <div className="mt-2">
+                  <select
+                    value={engineTypeFilter}
+                    onChange={(e) => handleEngineTypeChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">Any Engine Type</option>
+                    {ENGINE_TYPE_LIST.map((e) => (
+                      <option key={e} value={e}>
+                        {e}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* ENGINE CAPACITY */}
+            <div className="mb-4">
+              <button
+                onClick={() => toggleSection("engineCapacity")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Engine Capacity (cc)</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.engineCapacity ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.engineCapacity && (
+                <div className="mt-2">
+                  <select
+                    value={engineCapacityFilter}
+                    onChange={(e) => handleEngineCapacityChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">Any Capacity</option>
+                    {ENGINE_CAPACITY_LIST.map((ec) => (
+                      <option key={ec} value={ec}>
+                        {ec} cc
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* BODY TYPE */}
+            <div className="mb-6">
+              <button
+                onClick={() => toggleSection("bodyType")}
+                className="w-full flex items-center justify-between py-2 px-3 hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="text-sm font-semibold text-gray-700">Body Type</span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${expandedSections.bodyType ? "rotate-180" : ""}`}
+                />
+              </button>
+              {expandedSections.bodyType && (
+                <div className="mt-2">
+                  <select
+                    value={bodyTypeFilter}
+                    onChange={(e) => handleBodyTypeChange(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-2 text-sm 
+                               focus:ring-2 focus:ring-blue-500 transition"
+                  >
+                    <option value="">Any Body Type</option>
+                    {BODY_TYPE_LIST.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <button
@@ -242,7 +832,7 @@ const AllCars: React.FC = () => {
               className="w-full py-2 rounded-xl text-sm font-medium
                          border hover:bg-gray-100 transition"
             >
-              Clear Filters
+              Clear All Filters
             </button>
           </aside>
 
