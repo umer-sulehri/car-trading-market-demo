@@ -1,5 +1,7 @@
 "use client";
 
+import { Metadata } from "next";
+import { getSEOConfig, generateMetadata as generateSEOMetadata } from "@/config/seo";
 import { createSellCar, updateSellCar, getSellCarById } from "@/src/services/sellCar.service";
 import { uploadSellCarImage } from "@/src/services/sellCarMedia.service";
 import { getPublicMakes, getPublicModels, getPublicVersions, getPublicProvinces, getPublicCities, getPublicEngineTypes, getPublicTransmissions, getPublicFeatures, getPublicColors, getPublicBodyTypes } from "@/src/services/admin.lookup.service";

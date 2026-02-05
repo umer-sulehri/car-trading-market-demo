@@ -1,5 +1,7 @@
 "use client";
 
+import { Metadata } from "next";
+import { getSEOConfig, generateMetadata as generateSEOMetadata } from "@/config/seo";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";

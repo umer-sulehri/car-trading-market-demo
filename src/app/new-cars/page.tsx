@@ -1,5 +1,7 @@
 "use client";
 
+import { Metadata } from "next";
+import { getSEOConfig, generateMetadata as generateSEOMetadata } from "@/config/seo";
 import { useEffect, useState } from "react";
 import {
   getPublicMakes,

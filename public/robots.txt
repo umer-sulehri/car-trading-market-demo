@@ -1,0 +1,31 @@
+User-agent: *
+Allow: /
+Allow: /home
+Allow: /all-cars
+Allow: /new-cars
+Allow: /sell-car
+Allow: /auth/login
+Allow: /auth/signup
+
+Disallow: /admin/
+Disallow: /user/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /private/
+
+# Crawl delay in milliseconds
+Crawl-delay: 1
+
+# Specific rules for Google
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Specific rules for Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://cartradingmarket.com/sitemap.xml
+Sitemap: https://cartradingmarket.com/sitemap-cars.xml
