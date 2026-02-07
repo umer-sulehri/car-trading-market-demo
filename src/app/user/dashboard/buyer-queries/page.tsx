@@ -372,7 +372,7 @@ export default function BuyerQueriesPage() {
                 </div>
 
                 {/* Car Info */}
-                {selectedQuery.sell_car && (
+                {selectedQuery.sellCar && (
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-5 border-2 border-blue-200 shadow-sm">
                     <p className="text-xs font-semibold text-blue-600 uppercase mb-3 tracking-wide">
                       Car Details
@@ -380,11 +380,11 @@ export default function BuyerQueriesPage() {
                     <div className="space-y-3">
                       <div>
                         <p className="font-bold text-lg text-gray-900">
-                          {selectedQuery.sell_car.make?.name}{" "}
-                          {selectedQuery.sell_car.version?.name}
+                          {selectedQuery.sellCar.make?.name}{" "}
+                          {selectedQuery.sellCar.version?.name}
                         </p>
                         <p className="text-base font-semibold text-blue-600 mt-1">
-                          Rs. {selectedQuery.sell_car.price?.toLocaleString()}
+                          Rs. {selectedQuery.sellCar.price?.toLocaleString()}
                         </p>
                       </div>
                       <Link

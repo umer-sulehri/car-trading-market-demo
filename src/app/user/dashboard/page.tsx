@@ -62,7 +62,7 @@ export default function DashboardPage() {
       setUser(userData);
       setSellCars(carsData?.data || carsData || []);
       setBuyerQueries(queriesData?.data || queriesData || []);
-      setFavoriteCars(Array.isArray(favsData) ? favsData : favsData?.data || []);
+      setFavoriteCars(Array.isArray(favsData) ? favsData : (favsData as any)?.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {

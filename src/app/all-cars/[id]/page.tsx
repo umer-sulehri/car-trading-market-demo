@@ -58,7 +58,8 @@ export default function CarDetailsPage() {
 
   const fetchCar = async () => {
     try {
-      const carData = await apiClient.get(`/sell-cars/${id}`);
+      const response = await apiClient.get(`/sell-cars/${id}`);
+      const carData = response as any;
 
       if (!carData || typeof carData !== "object") {
         console.error("Car not found - invalid response:", carData);
@@ -67,7 +68,7 @@ export default function CarDetailsPage() {
         return;
       }
 
-      if (carData.status !== "approved") {
+      if ((carData.status as any) !== "approved" && carData.status !== 1) {
         console.error("Car is not approved for public viewing", carData.status);
         setCar(null);
         setLoading(false);

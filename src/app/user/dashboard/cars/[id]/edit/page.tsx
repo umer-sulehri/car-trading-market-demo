@@ -55,7 +55,7 @@ export default function EditSellCarPage() {
     try {
       setLoading(true);
       const data = await getMySellCar(Number(id));
-      setFormData(data);
+      setFormData(data as any);
     } catch (err) {
       setError("Failed to load car data");
       console.error(err);

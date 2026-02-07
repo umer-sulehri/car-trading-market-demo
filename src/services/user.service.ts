@@ -7,6 +7,7 @@ export interface AppUser {
   name: string;
   email: string;
   profile?: string | null;
+  created_at?: string;
 }
 
 export const getUserProfile = () => {

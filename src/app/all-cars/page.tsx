@@ -26,6 +26,7 @@ const DUMMY_IMAGE = carDummy;
 interface SellCar {
   id: number;
   make?: { id: number; name: string };
+  model?: { id: number; name: string };
   version?: { id: number; name: string; model?: { id: number; name: string } };
   city?: { id: number; name: string };
   province?: { id: number; name: string };
@@ -129,10 +130,10 @@ const AllCars: React.FC = () => {
       if (isAuth) {
         // Load favorite cars for this user
         const favoriteCars = await getFavoriteCars();
-        const favoriteIds = new Set(
+        const favoriteIds = new Set<number>(
           Array.isArray(favoriteCars) 
-            ? favoriteCars.map((car: any) => car.id) 
-            : (favoriteCars?.data || []).map((car: any) => car.id)
+            ? favoriteCars.map((car: any) => car.id as number) 
+            : ((favoriteCars as any)?.data || []).map((car: any) => car.id as number)
         );
         setFavorited(favoriteIds);
       }

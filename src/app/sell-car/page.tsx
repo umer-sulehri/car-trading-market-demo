@@ -8,7 +8,7 @@ import { getPublicMakes, getPublicModels, getPublicVersions, getPublicProvinces,
 import { getUserProfile } from "@/src/services/user.service";
 import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
 import { Make, CarModel, Version, Province, City, Feature } from "@/src/types/lookups";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/src/components/Navbar";
 import Footer from "@/src/components/Footer";
@@ -65,8 +65,7 @@ import {
 /* Dummy Data */
 const YEARS = [2026, 2025,2024, 2023, 2022, 2021, 2020];
 
-
-export default function AddCarPage() {
+function AddCarPageContent() {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [images, setImages] = useState<File[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -225,6 +224,7 @@ export default function AddCarPage() {
         transmission_id: car.transmission_id?.toString() || "",
         assembly_type: car.assembly_type || "Local",
         seller_city_id: car.seller_city_id?.toString() || "",
+        seller_province_id: car.seller_province_id?.toString() || "",
         registered_province: car.registered_province || "",
         registered_city: car.registered_city || "",
         engine: car.engine || "",
@@ -1542,6 +1542,14 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
     <Footer />
     </>
+  );
+}
+
+export default function AddCarPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AddCarPageContent />
+    </Suspense>
   );
 }
 /* ===== Step Grid Component ===== */

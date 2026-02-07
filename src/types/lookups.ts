@@ -25,6 +25,7 @@ export interface Version {
   make?: Make;
   engineType?: { id: number; name: string };
   transmission?: { id: number; name: string };
+  bodyType?: { id: number; name: string };
   features?: Feature[];
 }
 

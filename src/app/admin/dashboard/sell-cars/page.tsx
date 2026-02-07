@@ -43,7 +43,7 @@ export default function AdminSellCarsPage() {
     }
   };
 
-  const handleStatusUpdate = async (id: number, status: "approved" | "rejected") => {
+  const handleStatusUpdate = async (id: number, status: "approved" | "rejected" | "pending") => {
     try {
       await updateSellCarStatus(id, status);
       setSellCars(sellCars.map(car => 

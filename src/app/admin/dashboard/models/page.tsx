@@ -24,7 +24,7 @@ interface CarModel {
   id: number;
   name: string;
   make_id: number;
-  make: Make;
+  make?: Make;
 }
 
 interface Media {

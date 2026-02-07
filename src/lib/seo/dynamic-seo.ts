@@ -31,7 +31,7 @@ export function generateCarDetailsMetadata(car: any): Metadata {
     openGraph: {
       title: `${car.year} ${car.make} ${car.model}`,
       description: `${car.year} ${car.make} ${car.model} for Rs. ${car.price}`,
-      type: "product",
+      type: "article",
       images: car.images && car.images.length > 0 ? [{ url: car.images[0] }] : undefined,
     },
     twitter: {

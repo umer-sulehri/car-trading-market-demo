@@ -272,7 +272,7 @@ export default function AddCarPage() {
               <StepGrid
                 title="Select Year"
                 data={YEARS}
-                onSelect={(v) => {
+                onSelect={(v: any) => {
                   setCarInfo({ year: v, make: "", model: "", version: "" });
                   setStep(2);
                 }}
@@ -283,7 +283,7 @@ export default function AddCarPage() {
                 title="Select Make"
                 data={MAKES}
                 onBack={() => setStep(1)}
-                onSelect={(v) => {
+                onSelect={(v: any) => {
                   setCarInfo((p) => ({ ...p, make: v }));
                   setStep(3);
                 }}
@@ -294,7 +294,7 @@ export default function AddCarPage() {
                 title="Select Model"
                 data={MODELS}
                 onBack={() => setStep(2)}
-                onSelect={(v) => {
+                onSelect={(v: any) => {
                   setCarInfo((p) => ({ ...p, model: v }));
                   setStep(4);
                 }}
@@ -305,7 +305,7 @@ export default function AddCarPage() {
                 title="Select Version"
                 data={VERSIONS}
                 onBack={() => setStep(3)}
-                onSelect={(v) => {
+                onSelect={(v: any) => {
                   setCarInfo((p) => ({ ...p, version: v }));
                   setShowCarPopup(false);
                 }}

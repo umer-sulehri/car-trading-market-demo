@@ -66,7 +66,7 @@ export const sitemapConfig = {
       "https://cartradingmarket.com/sitemap-cars.xml",
     ],
   },
-  transform: async (config, path) => {
+  transform: async (config: any, path: string) => {
     // Custom URL transformations
     return {
       loc: path,

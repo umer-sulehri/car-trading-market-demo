@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getUserProfile, User } from "@/src/services/user.service";
+import { getUserProfile, AppUser } from "@/src/services/user.service";
 
 export default function Topbar() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
     getUserProfile()

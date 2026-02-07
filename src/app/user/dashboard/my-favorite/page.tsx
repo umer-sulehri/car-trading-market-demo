@@ -42,7 +42,7 @@ export default function MyFavoritesPage() {
     try {
       setLoading(true);
       const response = await getFavoriteCars();
-      const cars = Array.isArray(response) ? response : response?.data || [];
+      const cars = Array.isArray(response) ? response : (response as any)?.data || [];
       setFavoriteCars(cars);
     } catch (error) {
       console.error("Error fetching favorites:", error);
@@ -134,7 +134,7 @@ export default function MyFavoritesPage() {
                     {/* Image Container */}
                     <div className="relative h-56 bg-gray-200 overflow-hidden">
                       <Image
-                      src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.media[0].image || car.media[0].media_path}`}
+                      src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.media?.[0]?.image || car.media?.[0]?.media_path || PLACEHOLDER_IMAGE}`}
 
                         alt={`${makeName} ${versionName}`}
                         fill

@@ -24,7 +24,7 @@ interface SpecificationType {
 interface Specification {
   id: number;
   name: string;
-  car_specification_type_id: number;
+  car_specification_type_id?: number;
   type?: SpecificationType;
   is_visible?: boolean; // new field
 }
