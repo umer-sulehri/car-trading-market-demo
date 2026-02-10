@@ -17,9 +17,10 @@ export async function removeAuthToken() {
 }
 
 export async function handleLoginResponse(res: any) {
-  setAuthCookies({
+  await setAuthCookies({
     access_token: res.access_token,
     refresh_token: res.refresh_token,
+    user: res.user,
   });
 
   return res.user;
@@ -33,6 +34,7 @@ export async function handleAuthResponse(res: any) {
   await setAuthCookies({
     access_token: res.access_token,
     refresh_token: res.refresh_token,
+    user: res.user,
   });
 
   return res.user;

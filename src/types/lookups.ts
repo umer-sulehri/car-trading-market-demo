@@ -9,7 +9,8 @@ export interface CarModel {
   name: string;
   make_id: number;
   make?: Make;
-    media?: Array<{ id: number; url: string }>; 
+  media?: Array<{ id: number; url: string }>;
+  bodyTypes?: Array<{ id: number; name: string; description?: string }>;
 }
 
 export interface Version {

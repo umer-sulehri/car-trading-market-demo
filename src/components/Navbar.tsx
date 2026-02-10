@@ -16,10 +16,17 @@ const Navbar: FC = () => {
 
   // Check login status
   useEffect(() => {
-    fetch("/api/auth/me")
+    // Only run on client side
+    if (typeof window === "undefined") return;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+    fetch("/api/auth/me", { signal: controller.signal })
       .then((res) => (res.ok ? res.json() : { authenticated: false }))
       .then((data) => setIsLoggedIn(data.authenticated))
-      .catch(() => setIsLoggedIn(false));
+      .catch(() => setIsLoggedIn(false))
+      .finally(() => clearTimeout(timeoutId));
   }, [pathname]);
 
   // Disable scroll when mobile menu is open

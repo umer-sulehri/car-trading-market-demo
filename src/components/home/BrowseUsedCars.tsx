@@ -20,7 +20,7 @@ export default function BrowseUsedCars() {
   const [data, setData] = useState<DataItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch data based on category
+  // Fetch data based on category with timeout protection
   useEffect(() => {
     const fetchData = async () => {
       if (!active) {
@@ -32,15 +32,20 @@ export default function BrowseUsedCars() {
       try {
         let responseData: any[] = [];
 
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Request timeout")), 8000) // 8 second timeout
+        );
+
         switch (active) {
           case "city":
-            responseData = await getPublicCities();
+            responseData = await Promise.race([getPublicCities(), timeoutPromise]) as any[];
             break;
           case "make":
-            responseData = await getPublicMakes();
+            responseData = await Promise.race([getPublicMakes(), timeoutPromise]) as any[];
             break;
           case "bodyType":
-            responseData = await getPublicBodyTypes();
+            responseData = await Promise.race([getPublicBodyTypes(), timeoutPromise]) as any[];
             break;
           case "budget":
             responseData = BUDGETS.map((budget, idx) => ({

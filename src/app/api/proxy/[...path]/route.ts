@@ -54,8 +54,20 @@ export async function POST(
   context: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await context.params;
-  const res = await forward(req, path);
-  return new NextResponse(res.body, res);
+  try {
+    const res = await forward(req, path);
+    
+    if (res.status >= 400) {
+      const text = await res.text();
+      console.error(`[Proxy Error ${res.status}] POST ${path.join("/")}:`, text);
+      return new NextResponse(text, { status: res.status, headers: res.headers });
+    }
+    
+    return new NextResponse(res.body, res);
+  } catch (error) {
+    console.error("Proxy POST error:", error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
 }
 
 export async function GET(
@@ -63,8 +75,21 @@ export async function GET(
   context: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await context.params;
-  const res = await forward(req, path);
-  return new NextResponse(res.body, res);
+  try {
+    const res = await forward(req, path);
+    
+    // Log errors for debugging
+    if (res.status >= 400) {
+      const text = await res.text();
+      console.error(`[Proxy Error ${res.status}] ${path.join("/")}:`, text);
+      return new NextResponse(text, { status: res.status, headers: res.headers });
+    }
+    
+    return new NextResponse(res.body, res);
+  } catch (error) {
+    console.error("Proxy forward error:", error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
 }
 
 export async function PUT(
@@ -72,8 +97,20 @@ export async function PUT(
   context: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await context.params;
-  const res = await forward(req, path);
-  return new NextResponse(res.body, res);
+  try {
+    const res = await forward(req, path);
+    
+    if (res.status >= 400) {
+      const text = await res.text();
+      console.error(`[Proxy Error ${res.status}] PUT ${path.join("/")}:`, text);
+      return new NextResponse(text, { status: res.status, headers: res.headers });
+    }
+    
+    return new NextResponse(res.body, res);
+  } catch (error) {
+    console.error("Proxy PUT error:", error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -81,6 +118,18 @@ export async function DELETE(
   context: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await context.params;
-  const res = await forward(req, path);
-  return new NextResponse(res.body, res);
+  try {
+    const res = await forward(req, path);
+    
+    if (res.status >= 400) {
+      const text = await res.text();
+      console.error(`[Proxy Error ${res.status}] DELETE ${path.join("/")}:`, text);
+      return new NextResponse(text, { status: res.status, headers: res.headers });
+    }
+    
+    return new NextResponse(res.body, res);
+  } catch (error) {
+    console.error("Proxy DELETE error:", error);
+    return NextResponse.json({ error: String(error) }, { status: 500 });
+  }
 }

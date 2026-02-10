@@ -216,7 +216,16 @@ export function generateMetadata(config: SEOConfig) {
       images: config.ogImage ? [config.ogImage] : undefined,
     },
     canonical: config.canonical,
-    viewport: config.viewport || "width=device-width, initial-scale=1",
+  };
+}
+
+/**
+ * Generate viewport configuration for Next.js Viewport API
+ */
+export function generateViewport(config?: SEOConfig) {
+  return {
+    width: "device-width",
+    initialScale: 1,
   };
 }
 

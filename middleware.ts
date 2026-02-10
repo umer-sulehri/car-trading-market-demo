@@ -3,18 +3,50 @@ import type { NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
   const token = req.cookies.get("access_token")?.value;
-  const user = req.cookies.get("user")?.value;
+  const userCookie = req.cookies.get("user")?.value;
   const path = req.nextUrl.pathname;
 
-  // Allow unauthenticated access to sell-car and login pages
-  if (!token && path !== "/login" && path !== "/sell-car") {
-    return NextResponse.redirect(new URL("/login", req.url));
+  let userRole = null;
+  if (userCookie) {
+    try {
+      const userData = JSON.parse(userCookie);
+      userRole = userData.role;
+    } catch (e) {
+      // Cookie parse error, treat as no user
+    }
   }
 
-  if (path.startsWith("/admin") && !user?.includes("admin")) {
-    return NextResponse.redirect(new URL("/403", req.url));
+  // ========================================
+  // ADMIN ROUTES - Require authentication + admin role
+  // ========================================
+  if (path.startsWith("/admin")) {
+    // Check if authenticated
+    if (!token) {
+      return NextResponse.redirect(new URL("/auth/login", req.url));
+    }
+
+    // Check if admin role (verify on backend, use frontend for UX)
+    // Note: Backend middleware will also verify this
+    if (userRole !== "admin") {
+      return NextResponse.redirect(new URL("/forbidden", req.url));
+    }
+
+    return NextResponse.next();
   }
 
+  // ========================================
+  // USER DASHBOARD ROUTES - Require authentication
+  // ========================================
+  if (path.startsWith("/user")) {
+    // Check if authenticated
+    if (!token) {
+      return NextResponse.redirect(new URL("/auth/login", req.url));
+    }
+
+    return NextResponse.next();
+  }
+
+  // For all other routes, continue normally
   return NextResponse.next();
 }
 
