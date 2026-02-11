@@ -52,10 +52,15 @@ export const API = {
     specificationTypes: "/specification-types",
 
     newCarMedia: "/new-car-media",
+    carComparisons: "/admin/car-comparisons",
+    carComparisonsToggleStatus: (id: number) => `/admin/car-comparisons/${id}/toggle-status`,
 
   },
 
-    /* ===================== SELL CARS ===================== */
+  public: {
+    carComparisons: "/car-comparisons",
+    carComparison: (id: number) => `/car-comparisons/${id}`,
+  },
   sellCars: {
     list: "/sell-cars",                // public list
     create: "/sell-cars",              // user create
