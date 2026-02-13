@@ -1,0 +1,143 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    font-family: 'Poppins', sans-serif;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+
+    h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0;
+    }
+}
+
+.creditsCard {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    padding: 1.5rem;
+    border-radius: 12px;
+    min-width: 250px;
+    border-left: 4px solid #0ea5e9;
+}
+
+.creditRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    span {
+        color: #666;
+    }
+
+    strong {
+        font-size: 1.25rem;
+        color: #0369a1;
+    }
+}
+
+.error {
+    background: #fee;
+    color: #c00;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border-left: 4px solid #c00;
+}
+
+.success {
+    background: #efe;
+    color: #0a0;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    border-left: 4px solid #0a0;
+}
+
+.loading {
+    text-align: center;
+    padding: 3rem;
+    font-size: 1rem;
+    color: #666;
+}
+
+.section {
+    margin-bottom: 3rem;
+
+    h3 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 0 0 1.5rem 0;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+}
+
+.emptyState {
+    text-align: center;
+    padding: 3rem;
+    background: #f9f9f9;
+    border-radius: 12px;
+    border: 2px dashed #ddd;
+
+    p {
+        font-size: 1.1rem;
+        color: #666;
+        margin: 0.5rem 0;
+
+        &.subtext {
+            font-size: 0.95rem;
+            color: #999;
+        }
+    }
+}
+
+.listingsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 1.5rem;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: stretch;
+
+        h2 {
+            font-size: 1.5rem;
+        }
+    }
+
+    .creditsCard {
+        min-width: auto;
+    }
+
+    .section h3 {
+        font-size: 1.25rem;
+    }
+
+    .listingsGrid {
+        grid-template-columns: 1fr;
+    }
+}

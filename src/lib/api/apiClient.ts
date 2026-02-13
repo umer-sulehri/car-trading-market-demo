@@ -3,7 +3,7 @@ import axios from "axios";
 const apiClient = axios.create({
   baseURL: "/api/proxy",
   withCredentials: true,
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 30 second timeout for slow API responses
   // headers: {
   //   "Content-Type": "application/json",
   //   Accept: "application/json",

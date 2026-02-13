@@ -75,6 +75,13 @@ export default function Sidebar() {
         />
 
         <SidebarItem
+          href="/user/dashboard/featured-cars"
+          icon={<BarChart3 size={18} />}
+          label="Featured Cars"
+          isActive={pathname?.includes("/featured-cars")}
+        />
+
+        <SidebarItem
           href="/sell-car"
           icon={<PlusCircle size={18} />}
           label="Add New Car"

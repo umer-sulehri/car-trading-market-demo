@@ -166,6 +166,25 @@ const AdminSidebar: React.FC = () => {
           />
         </SidebarSection>
 
+        {/* Featured Cars Plans */}
+        <SidebarSection
+          title="Featured Plans"
+          icon={<BarChart3 size={18} />}
+          expanded={expandedSections.includes("Featured")}
+          onToggle={() => toggleSection("Featured")}
+        >
+          <SidebarItem
+            href="/admin/dashboard/feature-plans"
+            icon={<PlusCircle size={16} />}
+            label="Plans Management"
+          />
+          <SidebarItem
+            href="/admin/dashboard/featured-cars"
+            icon={<Car size={16} />}
+            label="Featured Cars"
+          />
+        </SidebarSection>
+
         {/* User & Transaction Management */}
         <SidebarSection
           title="Management"

@@ -183,6 +183,13 @@ function AddCarPageContent() {
     try {
       const user = await getUserProfile();
       setUserData(user);
+      // Pre-fill seller information from user profile
+      if (user) {
+        setFormData(prev => ({
+          ...prev,
+          seller_name: prev.seller_name || user.name || "",
+        }));
+      }
     } catch (error) {
       console.error("Error fetching user data:", error);
     }

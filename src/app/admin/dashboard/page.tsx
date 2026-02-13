@@ -46,25 +46,42 @@ const Dashboard: React.FC = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      const [carsRes, versionsRes, sellCarsRes, usersRes, queriesRes] = await Promise.all([
-        getAllCars(),
-        getAllVersions(),
-        getAdminSellCars(),
-        getAllUsers(),
-        getSellerQueries(),
+      // Fetch data with error handling for each endpoint
+      const [carsRes, versionsRes, sellCarsRes, usersRes, queriesRes] = await Promise.allSettled([
+        getAllCars().catch(e => { console.warn("Failed to fetch cars:", e); return []; }),
+        getAllVersions().catch(e => { console.warn("Failed to fetch versions:", e); return []; }),
+        getAdminSellCars().catch(e => { console.warn("Failed to fetch sell cars:", e); return []; }),
+        getAllUsers().catch(e => { console.warn("Failed to fetch users:", e); return []; }),
+        getSellerQueries().catch(e => { console.warn("Failed to fetch queries:", e); return []; }),
       ]);
 
+      // Extract data from PromiseSettledResult
+      const extractData = (result: PromiseSettledResult<any>) => {
+        if (result.status === 'fulfilled') {
+          const data = result.value;
+          return Array.isArray(data) ? data : (data?.data ?? []);
+        }
+        return [];
+      };
+
+      const cars = extractData(carsRes);
+      const versions = extractData(versionsRes);
+      const sellCars = extractData(sellCarsRes);
+      const users = extractData(usersRes);
+      const queries = extractData(queriesRes);
+
       setStats({
-        totalCars: Array.isArray(carsRes) ? carsRes.length : (carsRes?.data?.length || 0),
-        totalVersions: Array.isArray(versionsRes) ? versionsRes.length : (versionsRes?.data?.length || 0),
-        totalSellCars: Array.isArray(sellCarsRes) ? sellCarsRes.length : (sellCarsRes?.data?.length || 0),
-        totalUsers: Array.isArray(usersRes) ? usersRes.length : (usersRes?.data?.length || 0),
-        totalBuyerQueries: Array.isArray(queriesRes) ? queriesRes.length : (queriesRes?.data?.length || 0),
-        recentListings: Array.isArray(sellCarsRes) ? sellCarsRes.slice(0, 5) : (Array.isArray(sellCarsRes?.data) ? sellCarsRes.data.slice(0, 5) : []),
-        recentQueries: Array.isArray(queriesRes) ? queriesRes.slice(0, 5) : (Array.isArray(queriesRes?.data) ? queriesRes.data.slice(0, 5) : []),
+        totalCars: cars.length || 0,
+        totalVersions: versions.length || 0,
+        totalSellCars: sellCars.length || 0,
+        totalUsers: users.length || 0,
+        totalBuyerQueries: queries.length || 0,
+        recentListings: sellCars.slice(0, 5) || [],
+        recentQueries: queries.slice(0, 5) || [],
       });
     } catch (error) {
       console.error("Failed to fetch dashboard stats:", error);
+      // Set default state on error
       setStats({
         totalCars: 0,
         totalVersions: 0,

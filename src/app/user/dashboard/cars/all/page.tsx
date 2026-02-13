@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getMySellCars } from "@/src/services/adminSellCar.service";
 import { CheckCircle, Clock, XCircle, MapPin, Fuel, Zap, DollarSign, Gauge } from "lucide-react";
 import Link from "next/link";
+import FeaturedCarsSection from "@/src/components/FeaturedCarsSection";
 
 interface SellCar {
   id: number;
@@ -100,6 +101,9 @@ export default function AllCarsPage() {
           Add New Car
         </Link>
       </div>
+
+      {/* Featured Cars Section */}
+      <FeaturedCarsSection />
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
