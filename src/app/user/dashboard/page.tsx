@@ -5,12 +5,13 @@ import { getMySellCars } from "@/src/services/adminSellCar.service";
 import { getSellerQueries } from "@/src/services/buyer.service";
 import { getUserProfile, AppUser } from "@/src/services/user.service";
 import { getFavoriteCars, removeFromFavorites } from "@/src/services/favorite.service";
+import { featuredCarsAPI } from "@/src/services/featuredCarsAPI";
 import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
 import StatsCard from "./components/StatsCard";
 import Image from "next/image";
-import { 
+import {
   CheckCircle, Clock, XCircle, Plus, TrendingUp, Eye, AlertCircle,
-  DollarSign, Car, FileText, Settings, MessageSquare, Heart, Trash2, MapPin, Gauge
+  DollarSign, Car, FileText, Settings, MessageSquare, Heart, Trash2, MapPin, Gauge, Star, Sparkles
 } from "lucide-react";
 import Link from "next/link";
 
@@ -45,6 +46,7 @@ export default function DashboardPage() {
   const [sellCars, setSellCars] = useState<SellCar[]>([]);
   const [buyerQueries, setBuyerQueries] = useState<BuyerQuery[]>([]);
   const [favoriteCars, setFavoriteCars] = useState<any[]>([]);
+  const [credits, setCredits] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,16 +55,18 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      const [userData, carsData, queriesData, favsData] = await Promise.all([
+      const [userData, carsData, queriesData, favsData, creditsData] = await Promise.all([
         getUserProfile(),
         getMySellCars(),
         getSellerQueries(),
-        getFavoriteCars().catch(() => [])
+        getFavoriteCars().catch(() => []),
+        featuredCarsAPI.getUserCredits().catch(() => ({ data: null }))
       ]);
       setUser(userData);
       setSellCars(carsData?.data || carsData || []);
       setBuyerQueries(queriesData?.data || queriesData || []);
       setFavoriteCars(Array.isArray(favsData) ? favsData : (favsData as any)?.data || []);
+      setCredits(creditsData?.data || null);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -120,36 +124,36 @@ export default function DashboardPage() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <StatsCard 
-          title="Total Listings" 
+        <StatsCard
+          title="Total Listings"
           value={sellCars.length.toString()}
           icon={<Car className="w-6 h-6" />}
           bgColor="bg-blue-50"
           textColor="text-blue-600"
         />
-        <StatsCard 
-          title="Pending Review" 
+        <StatsCard
+          title="Pending Review"
           value={pendingCount.toString()}
           icon={<Clock className="w-6 h-6" />}
           bgColor="bg-yellow-50"
           textColor="text-yellow-600"
         />
-        <StatsCard 
-          title="Approved" 
+        <StatsCard
+          title="Approved"
           value={approvedCount.toString()}
           icon={<CheckCircle className="w-6 h-6" />}
           bgColor="bg-green-50"
           textColor="text-green-600"
         />
-        <StatsCard 
-          title="Buyer Queries" 
+        <StatsCard
+          title="Buyer Queries"
           value={buyerQueries.length.toString()}
           icon={<MessageSquare className="w-6 h-6" />}
           bgColor="bg-purple-50"
           textColor="text-purple-600"
         />
-        <StatsCard 
-          title="Favorite Cars" 
+        <StatsCard
+          title="Favorite Cars"
           value={favoriteCars.length.toString()}
           icon={<Heart className="w-6 h-6" />}
           bgColor="bg-red-50"
@@ -160,7 +164,7 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Link
             href="/sell-car"
             className="p-4 border border-gray-200 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all text-center"
@@ -174,6 +178,13 @@ export default function DashboardPage() {
           >
             <Eye className="w-6 h-6 mx-auto mb-2 text-blue-600" />
             <span className="text-sm font-medium text-gray-700">View All Cars</span>
+          </Link>
+          <Link
+            href="/user/dashboard/featured-cars"
+            className="p-4 border border-yellow-200 rounded-lg hover:border-yellow-500 hover:bg-yellow-50 transition-all text-center bg-yellow-50/50"
+          >
+            <Star className="w-6 h-6 mx-auto mb-2 text-yellow-600" />
+            <span className="text-sm font-medium text-gray-700">Featured Cars</span>
           </Link>
           <Link
             href="/user/dashboard/profile"
@@ -347,15 +358,14 @@ export default function DashboardPage() {
                     <p className="text-sm text-gray-600">{query.buyer_phone}</p>
                   </div>
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      query.status === "pending"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : query.status === "viewed"
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${query.status === "pending"
+                      ? "bg-yellow-100 text-yellow-700"
+                      : query.status === "viewed"
                         ? "bg-blue-100 text-blue-700"
                         : query.status === "responded"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-700"
+                      }`}
                   >
                     {query.status}
                   </span>

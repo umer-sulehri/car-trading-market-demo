@@ -50,20 +50,25 @@ interface SellCarPayload {
 
 
 
-import { 
-  MapPin, 
-  Car, 
-  Info, 
-  Image as ImageIcon, 
-  User, 
+import {
+  MapPin,
+  Car,
+  Info,
+  Image as ImageIcon,
+  User,
   ShieldCheck,
   Upload,
   CheckCircle,
   ChevronRight,
+  Star,
+  Sparkles,
+  Zap,
 } from "lucide-react";
+import { featuredCarsAPI } from "@/src/services/featuredCarsAPI";
+import FeatureModal from "@/src/components/featured-cars/FeatureModal";
 
 /* Dummy Data */
-const YEARS = [2026, 2025,2024, 2023, 2022, 2021, 2020];
+const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020];
 
 function AddCarPageContent() {
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -131,6 +136,13 @@ function AddCarPageContent() {
     whatsapp_allowed: false,
   });
 
+  // Featured car states
+  const [wantToFeature, setWantToFeature] = useState<boolean>(false);
+  const [availableCredits, setAvailableCredits] = useState<number>(0);
+  const [showFeaturePlans, setShowFeaturePlans] = useState<boolean>(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<number | undefined>(undefined);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+
   const STORAGE_KEY = "sellCarFormData";
   const STORAGE_IMAGES_KEY = "sellCarImages";
 
@@ -172,9 +184,24 @@ function AddCarPageContent() {
     if (isAuthenticated) {
       const savedData = localStorage.getItem(STORAGE_KEY);
       if (savedData) {
-        loadFormDataFromStorage();
-        alert("Your saved form data has been restored!");
-        console.log("Form data restored from storage after login");
+        try {
+          const data = JSON.parse(savedData);
+          loadFormDataFromStorage();
+
+          // Trigger feature logic if previously selected
+          if (data.wantToFeature) {
+            checkUserCredits().then(credits => {
+              if (credits === 0) {
+                setShowFeaturePlans(true);
+              }
+            });
+          }
+
+          alert("Your saved form data has been restored!");
+          console.log("Form data restored from storage after login");
+        } catch (e) {
+          console.error("Error parsing saved data:", e);
+        }
       }
     }
   }, [isAuthenticated]);
@@ -263,7 +290,7 @@ function AddCarPageContent() {
     }
   };
 
-/* ===================== LOCAL STORAGE FUNCTIONS ===================== */
+  /* ===================== LOCAL STORAGE FUNCTIONS ===================== */
   const saveFormDataToStorage = (formData: any) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
@@ -302,6 +329,16 @@ function AddCarPageContent() {
             whatsapp_allowed: data.formFields.whatsapp_allowed || false,
           }));
         }
+        setWantToFeature(data.wantToFeature || false);
+        if (data.selectedPlanId) {
+          setSelectedPlanId(data.selectedPlanId);
+          // Fetch plan details to restore selectedPlan state
+          featuredCarsAPI.getPlan(data.selectedPlanId).then(res => {
+            if (res.success && res.data) {
+              setSelectedPlan(res.data);
+            }
+          }).catch(err => console.error("Error restoring plan details:", err));
+        }
       }
     } catch (error) {
       console.error("Error loading from local storage:", error);
@@ -317,7 +354,7 @@ function AddCarPageContent() {
     }
   };
 
-/* ===================== FETCH API ===================== */
+  /* ===================== FETCH API ===================== */
   const fetchMakes = async () => {
     setIsLoadingMakes(true);
     try {
@@ -411,11 +448,52 @@ function AddCarPageContent() {
     setStep(1);
   };
 
+  const checkUserCredits = async () => {
+    try {
+      const response = await featuredCarsAPI.getUserCredits();
+      const credits = response.data?.available_credits || 0;
+      setAvailableCredits(credits);
+      return credits;
+    } catch (error) {
+      console.error("Error checking user credits:", error);
+      return 0;
+    }
+  };
+
+  const handleFeatureToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+
+    if (checked) {
+      if (!isAuthenticated) {
+        // Save state before redirect
+        const dataToSave = {
+          carInfo,
+          selectedFeatures,
+          formFields: formData,
+          wantToFeature: true
+        };
+        saveFormDataToStorage(dataToSave);
+        if (confirm("Please login to feature your car. Your data will be saved.")) {
+          window.location.href = `/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+        }
+        return;
+      }
+
+      // Check credits if authenticated
+      const credits = await checkUserCredits();
+      if (credits === 0) {
+        setShowFeaturePlans(true);
+      }
+    }
+
+    setWantToFeature(checked);
+  };
 
 
 
 
-const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
@@ -445,7 +523,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       // Validate mileage and price are numbers
       const mileage = Number(formData.get("mileage"));
       const price = Number(formData.get("price"));
-      
+
       if (isNaN(mileage) || mileage < 0) {
         alert("Please enter a valid mileage");
         setLoading(false);
@@ -482,11 +560,13 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
             seller_phone: formData.get("seller_phone"),
             secondary_phone: formData.get("secondary_phone"),
             whatsapp_allowed: formData.get("whatsapp_allowed") === "on",
-          }
+          },
+          wantToFeature,
+          selectedPlanId
         };
-        
+
         saveFormDataToStorage(dataToSave);
-        
+
         alert("Please login to continue. Your form data has been saved.");
         window.location.href = "/auth/login?redirect=/sell-car";
         setLoading(false);
@@ -540,7 +620,7 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       if (images.length > 0) {
         let uploadedCount = 0;
         let uploadErrors: string[] = [];
-        
+
         for (const file of images) {
           try {
             await uploadSellCarImage(sellCarIdToUse, file);
@@ -573,6 +653,24 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       setSelectedFeatures([]);
       clearFormDataFromStorage();
       setCurrentStep(1);
+
+      // Step 3: Feature the car if requested
+      if (wantToFeature && sellCarIdToUse) {
+        try {
+          // If a plan was selected and user has no credits, purchase the plan first
+          if (selectedPlanId && availableCredits < 1) {
+            console.log("Purchasing plan before featuring...");
+            await featuredCarsAPI.purchasePlan(selectedPlanId);
+          }
+
+          // Now create the featured listing
+          await featuredCarsAPI.createFeatureWithCredits(sellCarIdToUse, selectedPlanId);
+          console.log("Listing featured successfully");
+        } catch (featureErr) {
+          console.error("Failed to feature listing:", featureErr);
+          alert("Car listed successfully, but failed to feature. You can feature it from your dashboard.");
+        }
+      }
     } catch (err: any) {
       console.error("Submission error:", err);
       alert(err?.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} car listing`);
@@ -589,224 +687,223 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
   return (
     <>
-    <Navbar />
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+      <Navbar />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
         <div className="max-w-7xl mx-auto mt-16">
-            {/* Hero Section */}
-            <div className="flex justify-center ">
-                <div className="bg-white shadow-lg rounded-2xl mb-3 p-8 w-full max-w-full">
-                    <div className="text-center mb-2">
-                        <h1 className="text-4xl md:text-5xl font-semibold  text-blue-800 mb-4">
-                            {isEditMode ? 'Edit Your Car Listing' : 'Sell Your Car With 3 Easy & Simple Steps!'}
-                        </h1>
-                        <p className="text-lg text-gray-600 mb-6">
-                            {isEditMode ? 'Update your car details and pricing' : 'It\'s free and takes less than a minute'}
-                        </p>
-                    
-                    {/* Steps Progress */}
-                    <div className="flex justify-center items-center mb-6">
-                        {steps.map((s, index) => (
-                        <div key={s.number} className="flex items-center">
-                            <div className="flex flex-col items-center">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 mb-2 ${
-                                currentStep >= s.number 
-                                ? 'bg-blue-600 border-blue-600 text-white' 
-                                : 'border-gray-300 text-gray-400'
-                            }`}>
-                                <s.icon className="w-6 h-6" />
-                            </div>
-                            <span className="text-sm font-bold text-gray-700">{s.label}</span>
-                            </div>
-                            {index < steps.length - 1 && (
-                            <div className="w-24 h-1 mx-4 bg-gray-300" />
-                            )}
-                        </div>
-                        ))}
-                    </div>
-                    </div>
-                </div>
-            </div>
+          {/* Hero Section */}
+          <div className="flex justify-center ">
+            <div className="bg-white shadow-lg rounded-2xl mb-3 p-8 w-full max-w-full">
+              <div className="text-center mb-2">
+                <h1 className="text-4xl md:text-5xl font-semibold  text-blue-800 mb-4">
+                  {isEditMode ? 'Edit Your Car Listing' : 'Sell Your Car With 3 Easy & Simple Steps!'}
+                </h1>
+                <p className="text-lg text-gray-600 mb-6">
+                  {isEditMode ? 'Update your car details and pricing' : 'It\'s free and takes less than a minute'}
+                </p>
 
-            <div className="grid lg:grid-cols-3 gap-10">
+                {/* Steps Progress */}
+                <div className="flex justify-center items-center mb-6">
+                  {steps.map((s, index) => (
+                    <div key={s.number} className="flex items-center">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 mb-2 ${currentStep >= s.number
+                          ? 'bg-blue-600 border-blue-600 text-white'
+                          : 'border-gray-300 text-gray-400'
+                          }`}>
+                          <s.icon className="w-6 h-6" />
+                        </div>
+                        <span className="text-sm font-bold text-gray-700">{s.label}</span>
+                      </div>
+                      {index < steps.length - 1 && (
+                        <div className="w-24 h-1 mx-4 bg-gray-300" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-10">
             {/* Left Sticky Sidebar */}
             <div className="lg:col-span-1">
-                <div className="sticky top-24 bg-white  rounded-2xl shadow-lg p-8">
-                
-                
+              <div className="sticky top-24 bg-white  rounded-2xl shadow-lg p-8">
+
+
 
                 <div className="text-center mb-8  bg-gradient-to-br from-blue-100 to-blue-50">
-                    <div className="w-70 h-64 mx-auto mb-3  flex flex-col items-center justify-center p-4  transition">
-                        {/* Logo */}
-                        <Image
-                            src={logo.src} 
-                            alt="Logo"
-                            width={130}
-                            height={130}
-                            className="object-contain  border p-2 rounded-lg mb-6 hover:shadow-md transition"
-                        />
+                  <div className="w-70 h-64 mx-auto mb-3  flex flex-col items-center justify-center p-4  transition">
+                    {/* Logo */}
+                    <Image
+                      src={logo.src}
+                      alt="Logo"
+                      width={130}
+                      height={130}
+                      className="object-contain  border p-2 rounded-lg mb-6 hover:shadow-md transition"
+                    />
 
-                        {/* Text */}
-                        <div className="text-center">
-                            <h2 className="text-lg md:text-xl font-bold text-blue-700">
-                            Fast & Easy To Sell Your Car
-                            </h2>
-                            {/* <p className="text-sm text-blue-700 mt-1">
+                    {/* Text */}
+                    <div className="text-center">
+                      <h2 className="text-lg md:text-xl font-bold text-blue-700">
+                        Fast & Easy To Sell Your Car
+                      </h2>
+                      {/* <p className="text-sm text-blue-700 mt-1">
                             List your car in minutes and reach buyers instantly
                             </p> */}
-                        </div>
                     </div>
+                  </div>
 
-                    <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                  <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                     Sell your car fast
-                    </h2>
-                    <p className="text-gray-600 mb-6">
+                  </h2>
+                  <p className="text-gray-600 mb-6">
                     Get the best price for your car. Our platform connects you with serious buyers instantly.
                     Complete your listing in just a few minutes!
-                    </p>
+                  </p>
                 </div>
 
                 <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
                     <ShieldCheck className="w-5 h-5 text-blue-600" />
                     <span className="text-sm font-medium text-gray-700">Verified Buyers Only</span>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
                     <CheckCircle className="w-5 h-5 text-blue-600" />
                     <span className="text-sm font-medium text-gray-700">No Hidden Fees</span>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
                     <Upload className="w-5 h-5 text-blue-600" />
                     <span className="text-sm font-medium text-gray-700">Easy Photo Upload</span>
-                    </div>
+                  </div>
                 </div>
-                </div>
+              </div>
             </div>
 
             {/* Right Scrollable Form */}
             <div className="lg:col-span-2">
-                <form onSubmit={handleSubmit} className="space-y-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
 
 
 
-                    
+
                 {/* Card 1: Car Information */}
                 <div className="bg-white rounded-2xl mb-3 shadow-sm p-6 hover:shadow-lg transition-all">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-lg  bg-blue-100 flex items-center justify-center">
-                        <Car className="w-5 h-5 text-blue-600" />
+                      <Car className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Car Information</h3>
-                        <p className="text-sm text-gray-500">Select your car details</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Car Information</h3>
+                      <p className="text-sm text-gray-500">Select your car details</p>
                     </div>
-                    </div>
+                  </div>
 
-                    <button
+                  <button
                     type="button"
                     onClick={() => openCarModal()}
                     className="w-full border-2 border-dashed border-gray-300 rounded-xl p-6 text-left hover:border-blue-600 hover:bg-blue-50 transition-colors"
-                    >
-                    {carInfo.make_id  ? (
-                        <div>
+                  >
+                    {carInfo.make_id ? (
+                      <div>
                         <div className="text-xs text-gray-500 mb-2">Selected Car</div>
                         <div className="text-xl font-semibold text-gray-900">
-                           {carInfo.year} {carInfo.make_name} {carInfo.model_name}
+                          {carInfo.year} {carInfo.make_name} {carInfo.model_name}
                         </div>
                         <div className="text-sm text-gray-600 mt-1">Version: {carInfo.version_name}</div>
-                        </div>
+                      </div>
                     ) : (
-                        <div className="text-center py-4">
+                      <div className="text-center py-4">
                         <div className="text-gray-400 mb-2">Click to select car</div>
                         <div className="text-sm text-gray-500">
-                            Select Year, Make, Model & Version
+                          Select Year, Make, Model & Version
                         </div>
-                        </div>
+                      </div>
                     )}
-                    </button>
+                  </button>
 
-                    {/* Hidden inputs for backend */}
-                    <input type="hidden" name="year" value={carInfo.year ?? ""} />
+                  {/* Hidden inputs for backend */}
+                  <input type="hidden" name="year" value={carInfo.year ?? ""} />
 
-                    <input type="hidden" name="make_id" value={carInfo.make_id ?? ""} />
-                    <input type="hidden" name="model_id" value={carInfo.model_id ?? ""} />
-                    <input type="hidden" name="version_id" value={carInfo.version_id ?? ""} />
+                  <input type="hidden" name="make_id" value={carInfo.make_id ?? ""} />
+                  <input type="hidden" name="model_id" value={carInfo.model_id ?? ""} />
+                  <input type="hidden" name="version_id" value={carInfo.version_id ?? ""} />
 
                 </div>
 
                 {/* Card 2: Location */}
                 <div className="bg-white rounded-2xl mb-3 shadow-sm p-6 hover:shadow-lg transition-all">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-blue-600" />
+                      <MapPin className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Location</h3>
-                        <p className="text-sm text-gray-500">Where is your car located?</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Location</h3>
+                      <p className="text-sm text-gray-500">Where is your car located?</p>
                     </div>
-                    </div>
+                  </div>
 
-                    <div className="grid md:grid-cols-2 gap-4 mb-3">
+                  <div className="grid md:grid-cols-2 gap-4 mb-3">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Registration Province *</label>
-                        <select 
-                        name="registered_province" 
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Registration Province *</label>
+                      <select
+                        name="registered_province"
                         value={formData.registered_province}
                         onChange={(e) => {
                           const selectedProvince = e.target.value;
-                          setFormData({...formData, registered_province: selectedProvince, registered_city: ''})
+                          setFormData({ ...formData, registered_province: selectedProvince, registered_city: '' })
                         }}
-                        required 
+                        required
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        >
-                          <option value="">Select Province</option>
-                          {provinces.map(p => (
-                            <option key={p.id} value={p.name}>{p.name}</option>
-                          ))}
-                        </select>
+                      >
+                        <option value="">Select Province</option>
+                        {provinces.map(p => (
+                          <option key={p.id} value={p.name}>{p.name}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Registration City *</label>
-                        <select 
-                        name="registered_city" 
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Registration City *</label>
+                      <select
+                        name="registered_city"
                         value={formData.registered_city}
-                        onChange={(e) => setFormData({...formData, registered_city: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, registered_city: e.target.value })}
                         required
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        >
-                          <option value="">Select City</option>
-                          {cities
-                            .filter(c => c.province?.name === formData.registered_province)
-                            .map(c => (
-                              <option key={c.id} value={c.name}>{c.name}</option>
-                            ))}
-                        </select>
+                      >
+                        <option value="">Select City</option>
+                        {cities
+                          .filter(c => c.province?.name === formData.registered_province)
+                          .map(c => (
+                            <option key={c.id} value={c.name}>{c.name}</option>
+                          ))}
+                      </select>
                     </div>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-1 gap-4">
+                  </div>
+
+                  <div className="grid md:grid-cols-1 gap-4">
                     <div className="grid md:grid-cols-2 gap-4">
-                    <div>
+                      <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Seller Province *</label>
-                        <select 
-                        value={formData.seller_province_id}
-                        onChange={(e) => setFormData({...formData, seller_province_id: e.target.value, seller_city_id: ''})}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        <select
+                          value={formData.seller_province_id}
+                          onChange={(e) => setFormData({ ...formData, seller_province_id: e.target.value, seller_city_id: '' })}
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                         >
                           <option value="">Select Seller Province</option>
                           {provinces.map(p => (
                             <option key={p.id} value={p.id.toString()}>{p.name}</option>
                           ))}
                         </select>
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Seller City *</label>
-                        <select 
-                        name="seller_city_id" 
-                        value={formData.seller_city_id}
-                        onChange={(e) => setFormData({...formData, seller_city_id: e.target.value})}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                        <select
+                          name="seller_city_id"
+                          value={formData.seller_city_id}
+                          onChange={(e) => setFormData({ ...formData, seller_city_id: e.target.value })}
+                          required
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                         >
                           <option value="">Select City</option>
                           {cities
@@ -818,542 +915,477 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                               <option key={c.id} value={c.id}>{c.name}</option>
                             ))}
                         </select>
+                      </div>
                     </div>
-                    </div>
-                    </div>
+                  </div>
                 </div>
 
                 {/* Card 3: Details */}
                 <div className="bg-white rounded-2xl mb-3 shadow-sm p-6 hover:shadow-lg transition-all">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <Info className="w-5 h-5 text-blue-600" />
+                      <Info className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Car Details</h3>
-                        <p className="text-sm text-gray-500">Additional information about your car</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Car Details</h3>
+                      <p className="text-sm text-gray-500">Additional information about your car</p>
                     </div>
-                    </div>
+                  </div>
 
 
-                    <div className="grid md:grid-cols-2 gap-4">
-                    
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Mileage (km) *</label>
-                            <input 
-                            name="mileage" 
-                            type="number"
-                            value={formData.mileage}
-                            onChange={(e) => setFormData({...formData, mileage: e.target.value})}
-                            required 
-                            placeholder="Mileage in kilometers" 
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            />
-                        </div>
+                  <div className="grid md:grid-cols-2 gap-4">
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Price (PKR) *</label>
-                            <input 
-                            name="price" 
-                            type="number"
-                            value={formData.price}
-                            onChange={(e) => setFormData({...formData, price: e.target.value})}
-                            required 
-                            placeholder="Price" 
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            />
-                        </div>
-
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Mileage (km) *</label>
+                      <input
+                        name="mileage"
+                        type="number"
+                        value={formData.mileage}
+                        onChange={(e) => setFormData({ ...formData, mileage: e.target.value })}
+                        required
+                        placeholder="Mileage in kilometers"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      />
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4 mt-6">
-                    
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Engine Type *</label>
-                            <select 
-                            name="engine_type_id" 
-                            value={formData.engine_type_id}
-                            onChange={(e) => setFormData({...formData, engine_type_id: e.target.value})}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            >
-                              <option value="">Select Engine Type</option>
-                              {engineTypes.map(et => (
-                                <option key={et.id} value={et.id}>{et.name}</option>
-                              ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Engine Name</label>
-                            <input 
-                            name="engine"
-                            type="text"
-                            value={formData.engine}
-                            onChange={(e) => setFormData({...formData, engine: e.target.value})}
-                            placeholder="e.g., V6, 4-Cylinder" 
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            />
-                        </div>
-
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Price (PKR) *</label>
+                      <input
+                        name="price"
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                        required
+                        placeholder="Price"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      />
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4 mt-6">
-                    
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Transmission *</label>
-                            <select 
-                            name="transmission_id"
-                            value={formData.transmission_id}
-                            onChange={(e) => setFormData({...formData, transmission_id: e.target.value})}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            >
-                              <option value="">Select Transmission</option>
-                              {transmissions.map(t => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
-                              ))}
-                            </select>
-                        </div>
+                  </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Car Color *</label>
-                            <select 
-                            name="color_id"
-                            value={formData.color_id}
-                            onChange={(e) => setFormData({...formData, color_id: e.target.value})}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            >
-                              <option value="">Select Car Color</option>
-                              {colors.map(color => (
-                                <option key={color.id} value={color.id}>{color.name}</option>
-                              ))}
-                            </select>
-                        </div>
+                  <div className="grid md:grid-cols-2 gap-4 mt-6">
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Body Type *</label>
-                            <select 
-                            name="body_type_id"
-                            value={formData.body_type_id}
-                            onChange={(e) => setFormData({...formData, body_type_id: e.target.value})}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            >
-                              <option value="">Select Body Type</option>
-                              {bodyTypes.map(type => (
-                                <option key={type.id} value={type.id}>{type.name}</option>
-                              ))}
-                            </select>
-                        </div>
-
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Engine Type *</label>
+                      <select
+                        name="engine_type_id"
+                        value={formData.engine_type_id}
+                        onChange={(e) => setFormData({ ...formData, engine_type_id: e.target.value })}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      >
+                        <option value="">Select Engine Type</option>
+                        {engineTypes.map(et => (
+                          <option key={et.id} value={et.id}>{et.name}</option>
+                        ))}
+                      </select>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4 mt-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Assembly Type *</label>
-                            <select
-                            name="assembly_type"
-                            value={formData.assembly_type}
-                            onChange={(e) => setFormData({...formData, assembly_type: e.target.value})}
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            >
-                                <option value="">Select Assembly Type</option>
-                                <option value="Local">Local</option>
-                                <option value="Imported">Imported</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Engine Capacity (CC)</label>
-                            <input 
-                            name="capacity"
-                            type="number"
-                            value={formData.capacity}
-                            onChange={(e) => setFormData({...formData, capacity: e.target.value})}
-                            placeholder="e.g., 1500" 
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                            />
-                        </div>
-
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Engine Name</label>
+                      <input
+                        name="engine"
+                        type="text"
+                        value={formData.engine}
+                        onChange={(e) => setFormData({ ...formData, engine: e.target.value })}
+                        placeholder="e.g., V6, 4-Cylinder"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      />
                     </div>
 
-<div className="grid md:grid-cols-1 gap-4 mt-6">
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">Features</label>
-    <div className="border border-gray-300 rounded-lg p-4 max-h-48 overflow-y-auto">
-      {features
-        .filter(f => f.is_visible) // <-- Only show visible features
-        .map(f => (
-          <label key={f.id} className="flex items-center gap-2 mb-2 cursor-pointer">
-            <input 
-              type="checkbox"
-              value={f.id}
-              checked={selectedFeatures.includes(f.id)}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setSelectedFeatures([...selectedFeatures, f.id]);
-                } else {
-                  setSelectedFeatures(selectedFeatures.filter(id => id !== f.id));
-                }
-              }}
-              className="w-4 h-4"
-            />
-            <span className="text-sm text-gray-700">{f.name}</span>
-          </label>
-      ))}
-    </div>
-  </div>
-</div>
+                  </div>
 
-                    <input type="hidden" name="registered_province" value="Punjab" />
+                  <div className="grid md:grid-cols-2 gap-4 mt-6">
 
-                    <div className="mt-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Transmission *</label>
+                      <select
+                        name="transmission_id"
+                        value={formData.transmission_id}
+                        onChange={(e) => setFormData({ ...formData, transmission_id: e.target.value })}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      >
+                        <option value="">Select Transmission</option>
+                        {transmissions.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Car Color *</label>
+                      <select
+                        name="color_id"
+                        value={formData.color_id}
+                        onChange={(e) => setFormData({ ...formData, color_id: e.target.value })}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      >
+                        <option value="">Select Car Color</option>
+                        {colors.map(color => (
+                          <option key={color.id} value={color.id}>{color.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Body Type *</label>
+                      <select
+                        name="body_type_id"
+                        value={formData.body_type_id}
+                        onChange={(e) => setFormData({ ...formData, body_type_id: e.target.value })}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      >
+                        <option value="">Select Body Type</option>
+                        {bodyTypes.map(type => (
+                          <option key={type.id} value={type.id}>{type.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4 mt-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Assembly Type *</label>
+                      <select
+                        name="assembly_type"
+                        value={formData.assembly_type}
+                        onChange={(e) => setFormData({ ...formData, assembly_type: e.target.value })}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      >
+                        <option value="">Select Assembly Type</option>
+                        <option value="Local">Local</option>
+                        <option value="Imported">Imported</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Engine Capacity (CC)</label>
+                      <input
+                        name="capacity"
+                        type="number"
+                        value={formData.capacity}
+                        onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                        placeholder="e.g., 1500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+
+                  </div>
+
+                  <div className="grid md:grid-cols-1 gap-4 mt-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Features</label>
+                      <div className="border border-gray-300 rounded-lg p-4 max-h-48 overflow-y-auto">
+                        {features
+                          .filter(f => f.is_visible) // <-- Only show visible features
+                          .map(f => (
+                            <label key={f.id} className="flex items-center gap-2 mb-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                value={f.id}
+                                checked={selectedFeatures.includes(f.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedFeatures([...selectedFeatures, f.id]);
+                                  } else {
+                                    setSelectedFeatures(selectedFeatures.filter(id => id !== f.id));
+                                  }
+                                }}
+                                className="w-4 h-4"
+                              />
+                              <span className="text-sm text-gray-700">{f.name}</span>
+                            </label>
+                          ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <input type="hidden" name="registered_province" value="Punjab" />
+
+                  <div className="mt-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                     <textarea
-                        name="description"
-                        rows={4}
-                        value={formData.description}
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        placeholder="Describe your car's condition, features, maintenance history, etc."
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
+                      name="description"
+                      rows={4}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Describe your car's condition, features, maintenance history, etc."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
                     />
-                    </div>
+                  </div>
                 </div>
 
                 {/* Card 4: Photos */}
                 <div className="bg-white rounded-2xl mb-3 shadow-sm p-6 hover:shadow-lg transition-all">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <ImageIcon className="w-5 h-5 text-blue-600" />
+                      <ImageIcon className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Photos</h3>
-                        <p className="text-sm text-gray-500">Upload clear photos of your car</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Photos</h3>
+                      <p className="text-sm text-gray-500">Upload clear photos of your car</p>
                     </div>
-                    </div>
+                  </div>
 
-                    <div 
+                  <div
                     className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                   onClick={() => imageInputRef.current?.click()}
+                    onClick={() => imageInputRef.current?.click()}
                     onMouseEnter={() => setCurrentStep(2)}
-                    >
+                  >
                     <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <div className="text-gray-600 font-medium mb-2">Click to upload photos</div>
                     <p className="text-sm text-gray-500">Recommended: 6-12 clear photos</p>
-                    <input 
-                        ref={imageInputRef}
-                        id="image-upload"
-                        type="file" 
-                        multiple 
-                        name="images[]"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        className="hidden"
+                    <input
+                      ref={imageInputRef}
+                      id="image-upload"
+                      type="file"
+                      multiple
+                      name="images[]"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
                     />
-                    </div>
+                  </div>
 
-                    {images.length > 0 && (
+                  {images.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
-                        {images.map((img, i) => (
+                      {images.map((img, i) => (
                         <div key={i} className="relative group">
-                            <img
+                          <img
                             src={URL.createObjectURL(img)}
                             className="h-40 w-full object-cover rounded-lg"
                             alt={`Car photo ${i + 1}`}
-                            />
-                            <div className="absolute inset-0  bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
+                          />
+                          <div className="absolute inset-0  bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center">
                             <button
-                                type="button"
-                                onClick={() => setImages(images.filter((_, index) => index !== i))}
-                                className="opacity-0 group-hover:opacity-100 text-white text-sm bg-red-500 px-3 py-1 rounded-lg transition-opacity"
+                              type="button"
+                              onClick={() => setImages(images.filter((_, index) => index !== i))}
+                              className="opacity-0 group-hover:opacity-100 text-white text-sm bg-red-500 px-3 py-1 rounded-lg transition-opacity"
                             >
-                                Remove
+                              Remove
                             </button>
-                            </div>
+                          </div>
                         </div>
-                        ))}
+                      ))}
                     </div>
-                    )}
+                  )}
                 </div>
 
                 {/* Card 5: Seller Info */}
                 <div className="bg-white rounded-2xl mb-3 shadow-sm p-6 hover:shadow-lg transition-all">
-                    <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center gap-3 mb-6">
                     <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                        <User className="w-5 h-5 text-blue-600" />
+                      <User className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Seller Information</h3>
-                        <p className="text-sm text-gray-500">Contact details for buyers</p>
+                      <h3 className="text-lg font-semibold text-gray-900">Seller Information</h3>
+                      <p className="text-sm text-gray-500">Contact details for buyers</p>
                     </div>
-                    </div>
+                  </div>
 
-                    <div className="grid md:grid-cols-2 gap-6">
+                  <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                        <input 
-                        name="seller_name" 
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                      <input
+                        name="seller_name"
                         value={formData.seller_name}
-                        onChange={(e) => setFormData({...formData, seller_name: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, seller_name: e.target.value })}
                         required
-                        placeholder="John Doe" 
+                        placeholder="John Doe"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        />
+                      />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-                        <input 
-                        name="seller_phone" 
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                      <input
+                        name="seller_phone"
                         value={formData.seller_phone}
-                        onChange={(e) => setFormData({...formData, seller_phone: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, seller_phone: e.target.value })}
                         required
-                        placeholder="(123) 456-7890" 
+                        placeholder="(123) 456-7890"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        />
+                      />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Secondary Phone</label>
-                        <input 
-                        name="secondary_phone" 
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Secondary Phone</label>
+                      <input
+                        name="secondary_phone"
                         value={formData.secondary_phone}
-                        onChange={(e) => setFormData({...formData, secondary_phone: e.target.value})}
-                        placeholder="Optional secondary phone" 
+                        onChange={(e) => setFormData({ ...formData, secondary_phone: e.target.value })}
+                        placeholder="Optional secondary phone"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        />
+                      />
                     </div>
                     <div>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <input 
-                            type="checkbox"
-                            name="whatsapp_allowed"
-                            checked={formData.whatsapp_allowed}
-                            onChange={(e) => setFormData({...formData, whatsapp_allowed: e.target.checked})}
-                            className="w-4 h-4"
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <input
+                          type="checkbox"
+                          name="whatsapp_allowed"
+                          checked={formData.whatsapp_allowed}
+                          onChange={(e) => setFormData({ ...formData, whatsapp_allowed: e.target.checked })}
+                          className="w-4 h-4"
                         />
                         Allow WhatsApp Contact
-                        </label>
+                      </label>
                     </div>
-                    </div>
+                  </div>
 
+                </div>
+
+                {/* Card 6: Feature Your Car (Optional) */}
+                <div className="bg-white rounded-2xl mb-6 shadow-sm p-6 hover:shadow-lg transition-all border-2 border-transparent hover:border-blue-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                        <Star className="w-5 h-5 text-yellow-600 fill-yellow-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">Feature Your Car (Optional)</h3>
+                        <p className="text-sm text-gray-500">Get up to 10x more views and sell faster!</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={wantToFeature}
+                          onChange={handleFeatureToggle}
+                        />
+                        <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {wantToFeature && (
+                    <div className="mt-4 p-4 rounded-xl bg-blue-50 border border-blue-100 animate-in fade-in slide-in-from-top-2">
+                      <div className="flex items-start gap-4">
+                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                          <Sparkles className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-blue-900">Featured Listing Benefits</h4>
+                          <ul className="mt-2 space-y-2">
+                            <li className="flex items-center gap-2 text-sm text-blue-800">
+                              <Zap className="w-4 h-4" /> Top of search results
+                            </li>
+                            <li className="flex items-center gap-2 text-sm text-blue-800">
+                              <Zap className="w-4 h-4" /> Distinctive highlighted border
+                            </li>
+                            <li className="flex items-center gap-2 text-sm text-blue-800">
+                              <Zap className="w-4 h-4" /> Special "Featured" badge
+                            </li>
+                          </ul>
+
+                          {isAuthenticated && (
+                            <div className="mt-4 flex flex-col gap-2 border-t border-blue-200 pt-4">
+                              <div className="flex items-center justify-between">
+                                <div className="text-sm">
+                                  <span className="text-gray-600">{selectedPlan ? "Plan Credits:" : "Available Credits:"}</span>
+                                  <span className="ml-1 font-bold text-blue-700">
+                                    {selectedPlan ? selectedPlan.credits_count : availableCredits}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowFeaturePlans(true)}
+                                  className="text-xs font-bold text-blue-600 underline hover:text-blue-800"
+                                >
+                                  {selectedPlanId ? 'Change Plan' : (availableCredits === 0 ? 'Select Plan' : '')}
+                                </button>
+                              </div>
+
+                              {selectedPlan && (
+                                <div className="bg-white bg-opacity-60 p-2 rounded-lg border border-blue-200">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-blue-900">Selected Plan: {selectedPlan.name}</span>
+                                    <span className="text-xs font-bold text-blue-700">Rs. {selectedPlan.price.toLocaleString()}</span>
+                                  </div>
+                                  {availableCredits === 0 && (
+                                    <p className="text-[10px] text-blue-600 mt-1 italic">
+                                      * Plan will be purchased and credits used upon publishing
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Submit Button */}
                 <button
-                    type="submit"
-                    disabled={loading || isLoadingExistingCar}
-                    className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="submit"
+                  disabled={loading || isLoadingExistingCar}
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-4 rounded-xl text-lg font-semibold hover:from-blue-700 hover:to-blue-600 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {loading ? (
+                  {loading ? (
                     <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        {isEditMode ? 'Updating...' : 'Submitting...'}
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      {isEditMode ? 'Updating...' : 'Submitting...'}
                     </>
-                    ) : isLoadingExistingCar ? (
+                  ) : isLoadingExistingCar ? (
                     <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Loading...
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Loading...
                     </>
-                    ) : (
+                  ) : (
                     <>
-                        {isEditMode ? 'Update Listing' : (isAuthenticated ? 'Publish Your Listing' : 'Publish Now')}
-                        <ChevronRight className="w-5 h-5" />
+                      {isEditMode ? 'Update Listing' : (isAuthenticated ? 'Publish Your Listing' : 'Publish Now')}
+                      <ChevronRight className="w-5 h-5" />
                     </>
-                    )}
+                  )}
                 </button>
-                </form>
+              </form>
             </div>
-            </div>
+          </div>
         </div>
 
-        </div>
-        
-{/* ===== Car Selection Modal ===== */}
-{showCarPopup && (
-  <div className="car-modal-overlay">
-    <div className="car-modal-content">
-      {/* Small Screen: Step-by-Step Design */}
-      {isSmallScreen ? (
-        <>
-          {/* Header */}
-          <div className="flex justify-between items-center border-b border-gray-200 p-6">
-            <div>
-              <h3 className="text-2xl font-semibold text-gray-900">
-                Select Car Information
-              </h3>
-              <p className="text-sm text-gray-500">
-                Step {step} of 4 • {step === 1 ? "Year" : step === 2 ? "Make" : step === 3 ? "Model" : "Version"}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowCarPopup(false)}
-              className="w-10 h-10 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
-            >
-              ✕
-            </button>
-          </div>
+      </div>
 
-          {/* Body - Step by Step */}
-          <div className="car-modal-body p-6">
-            {step === 1 && (
-              <StepGrid
-                title="Select Model Year"
-                subtitle="Choose the manufacturing year of your car"
-                data={YEARS}
-                onSelect={(v: number) => {
-                  setCarInfo({
-                    year: v,
-                    make_id: null,
-                    make_name: "",
-                    model_id: null,
-                    model_name: "",
-                    version_id: null,
-                    version_name: "",
-                  });
-                  setStep(2);
-                }}
-              />
-            )}
-            {step === 2 && (
-              <StepGrid
-                title="Select Make"
-                subtitle="Choose the brand of your car"
-                data={makes}
-                onBack={() => setStep(1)}
-                isMakeStep={true}
-                onSelect={async (make: Make) => {
-                  setCarInfo(prev => ({ ...prev, make_id: make.id, make_name: make.name, model_id: null, model_name: "", version_id: null, version_name: "" }));
-                  setIsLoadingModels(true);
-                  const modelData = await getPublicModels(make.id);
-                  setModels(modelData);
-                  setIsLoadingModels(false);
-                  setStep(3);
-                }}
-              />
-            )}
-            {step === 3 && (
-              isLoadingModels ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="ml-3 text-gray-600">Loading models...</span>
+      {/* ===== Car Selection Modal ===== */}
+      {showCarPopup && (
+        <div className="car-modal-overlay">
+          <div className="car-modal-content">
+            {/* Small Screen: Step-by-Step Design */}
+            {isSmallScreen ? (
+              <>
+                {/* Header */}
+                <div className="flex justify-between items-center border-b border-gray-200 p-6">
+                  <div>
+                    <h3 className="text-2xl font-semibold text-gray-900">
+                      Select Car Information
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Step {step} of 4 • {step === 1 ? "Year" : step === 2 ? "Make" : step === 3 ? "Model" : "Version"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowCarPopup(false)}
+                    className="w-10 h-10 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+                  >
+                    ✕
+                  </button>
                 </div>
-              ) : (
-                <StepGrid
-                  title="Select Model"
-                  subtitle="Choose your car model"
-                  data={models}
-                  onBack={() => setStep(2)}
-                  onSelect={async (model: CarModel) => {
-                    setCarInfo((prev) => ({
-                      ...prev,
-                      model_id: model.id,
-                      model_name: model.name,
-                      version_id: null,
-                      version_name: "",
-                    }));
-                    setIsLoadingVersions(true);
-                    const [versionData, bodyTypeData] = await Promise.all([
-                      getPublicVersions(model.id),
-                      getPublicBodyTypes(model.id),
-                    ]);
-                    setVersions(versionData);
-                    setBodyTypes(bodyTypeData);
-                    setIsLoadingVersions(false);
-                    setStep(4);
-                  }}
-                />
-              )
-            )}
-            {step === 4 && (
-              isLoadingVersions ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="ml-3 text-gray-600">Loading versions...</span>
-                </div>
-              ) : (
-                <StepGrid
-                  title="Select Version"
-                  subtitle="Choose your car version"
-                  data={versions}
-                  onBack={() => setStep(3)}
-                  onSelect={(version: Version) => {
-                    setCarInfo((prev) => ({
-                      ...prev,
-                      version_id: version.id,
-                      version_name: version.name,
-                      year: version.year,
-                    }));
-                    setFormData((prev) => ({
-                      ...prev,
-                      engine_type_id: version.engine_type_id?.toString() || "",
-                      transmission_id: version.transmission_id?.toString() || "",
-                      capacity: version.cc?.toString() || "",
-                    }));
-                    if (version.features && Array.isArray(version.features)) {
-                      const featureIds = version.features.map((f: Feature) => f.id);
-                      setSelectedFeatures(featureIds);
-                    } else {
-                      setSelectedFeatures([]);
-                    }
-                    setShowCarPopup(false);
-                  }}
-                />
-              )
-            )}
-          </div>
 
-          {/* Footer Back Button */}
-          {step > 1 && (
-            <div className="border-t border-gray-200 p-6">
-              <button
-                onClick={() => setStep(step - 1)}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                ← Back
-              </button>
-            </div>
-          )}
-        </>
-      ) : (
-        <>
-          {/* Large Screen: Multi Column Layout */}
-          {/* Header */}
-          <div className="flex justify-between items-center border-b border-gray-200 p-6">
-            <div>
-              <h3 className="text-2xl font-semibold text-gray-900">
-                Select Your Car
-              </h3>
-              <p className="text-sm text-gray-500">
-                Choose Year, Make, Model & Version
-              </p>
-            </div>
-            <button
-              onClick={() => setShowCarPopup(false)}
-              className="w-10 h-10 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Body - Multi Column Layout */}
-          <div className="car-modal-body p-6">
-            <div className="grid grid-cols-5 gap-4">
-              
-              {/* Column 1: Year Selection */}
-              <div className="flex flex-col">
-                <div className="mb-4">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-1">Year</h4>
-                  <p className="text-sm text-gray-600">Select year</p>
-                </div>
-                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                  {YEARS.map((year) => (
-                    <button
-                      key={year}
-                      onClick={() => {
+                {/* Body - Step by Step */}
+                <div className="car-modal-body p-6">
+                  {step === 1 && (
+                    <StepGrid
+                      title="Select Model Year"
+                      subtitle="Choose the manufacturing year of your car"
+                      data={YEARS}
+                      onSelect={(v: number) => {
                         setCarInfo({
-                          year: year,
+                          year: v,
                           make_id: null,
                           make_name: "",
                           model_id: null,
@@ -1361,193 +1393,351 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
                           version_id: null,
                           version_name: "",
                         });
+                        setStep(2);
                       }}
-                      className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${
-                        carInfo.year === year
-                          ? 'border-blue-600 bg-blue-50 text-blue-900'
-                          : 'border-gray-200 hover:border-blue-400 text-gray-700'
-                      }`}
-                    >
-                      {year}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Column 2: Make Selection */}
-              {carInfo.year && (
-                <div className="flex flex-col">
-                  <div className="mb-4">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Make</h4>
-                    <p className="text-sm text-gray-600">Select brand</p>
-                  </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                    {makes.map((make) => (
-                      <button
-                        key={make.id}
-                        onClick={async () => {
-                          setCarInfo(prev => ({ ...prev, make_id: make.id, make_name: make.name, model_id: null, model_name: "", version_id: null, version_name: "" }));
-                          setIsLoadingModels(true);
-                          const modelData = await getPublicModels(make.id);
-                          setModels(modelData);
-                          setIsLoadingModels(false);
+                    />
+                  )}
+                  {step === 2 && (
+                    <StepGrid
+                      title="Select Make"
+                      subtitle="Choose the brand of your car"
+                      data={makes}
+                      onBack={() => setStep(1)}
+                      isMakeStep={true}
+                      onSelect={async (make: Make) => {
+                        setCarInfo(prev => ({ ...prev, make_id: make.id, make_name: make.name, model_id: null, model_name: "", version_id: null, version_name: "" }));
+                        setIsLoadingModels(true);
+                        const modelData = await getPublicModels(make.id);
+                        setModels(modelData);
+                        setIsLoadingModels(false);
+                        setStep(3);
+                      }}
+                    />
+                  )}
+                  {step === 3 && (
+                    isLoadingModels ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="ml-3 text-gray-600">Loading models...</span>
+                      </div>
+                    ) : (
+                      <StepGrid
+                        title="Select Model"
+                        subtitle="Choose your car model"
+                        data={models}
+                        onBack={() => setStep(2)}
+                        onSelect={async (model: CarModel) => {
+                          setCarInfo((prev) => ({
+                            ...prev,
+                            model_id: model.id,
+                            model_name: model.name,
+                            version_id: null,
+                            version_name: "",
+                          }));
+                          setIsLoadingVersions(true);
+                          const [versionData, bodyTypeData] = await Promise.all([
+                            getPublicVersions(model.id),
+                            getPublicBodyTypes(model.id),
+                          ]);
+                          setVersions(versionData);
+                          setBodyTypes(bodyTypeData);
+                          setIsLoadingVersions(false);
+                          setStep(4);
                         }}
-                        className={`w-full px-3 py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
-                          carInfo.make_id === make.id
-                            ? 'border-blue-600 bg-blue-50'
-                            : 'border-gray-200 hover:border-blue-400'
-                        }`}
-                      >
-                        {make.logo && (
-                          <img src={make.logo} alt={make.name} className="w-6 h-6 object-contain" />
-                        )}
-                        <span className={`font-medium text-sm ${carInfo.make_id === make.id ? 'text-blue-900' : 'text-gray-700'}`}>
-                          {make.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Column 3: Model Selection */}
-              {carInfo.make_id && (
-                <div className="flex flex-col">
-                  <div className="mb-4">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Model</h4>
-                    <p className="text-sm text-gray-600">Select model</p>
-                  </div>
-                  {isLoadingModels ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                      {models.map((model) => (
-                        <button
-                          key={model.id}
-                          onClick={async () => {
-                            setCarInfo((prev) => ({
-                              ...prev,
-                              model_id: model.id,
-                              model_name: model.name,
-                              version_id: null,
-                              version_name: "",
-                            }));
-                            setIsLoadingVersions(true);
-                            const versionData = await getPublicVersions(model.id);
-                            setVersions(versionData);
-                            setIsLoadingVersions(false);
-                          }}
-                          className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${
-                            carInfo.model_id === model.id
-                              ? 'border-blue-600 bg-blue-50 text-blue-900'
-                              : 'border-gray-200 hover:border-blue-400 text-gray-700'
-                          }`}
-                        >
-                          {model.name}
-                        </button>
-                      ))}
-                    </div>
+                      />
+                    )
+                  )}
+                  {step === 4 && (
+                    isLoadingVersions ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="ml-3 text-gray-600">Loading versions...</span>
+                      </div>
+                    ) : (
+                      <StepGrid
+                        title="Select Version"
+                        subtitle="Choose your car version"
+                        data={versions}
+                        onBack={() => setStep(3)}
+                        onSelect={(version: Version) => {
+                          setCarInfo((prev) => ({
+                            ...prev,
+                            version_id: version.id,
+                            version_name: version.name,
+                            year: version.year,
+                          }));
+                          setFormData((prev) => ({
+                            ...prev,
+                            engine_type_id: version.engine_type_id?.toString() || "",
+                            transmission_id: version.transmission_id?.toString() || "",
+                            capacity: version.cc?.toString() || "",
+                          }));
+                          if (version.features && Array.isArray(version.features)) {
+                            const featureIds = version.features.map((f: Feature) => f.id);
+                            setSelectedFeatures(featureIds);
+                          } else {
+                            setSelectedFeatures([]);
+                          }
+                          setShowCarPopup(false);
+                        }}
+                      />
+                    )
                   )}
                 </div>
-              )}
 
-              {/* Column 4: Version Selection */}
-              {carInfo.model_id && (
-                <div className="flex flex-col">
-                  <div className="mb-4">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Version</h4>
-                    <p className="text-sm text-gray-600">Select version</p>
-                  </div>
-                  {isLoadingVersions ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                      {versions.map((version) => (
-                        <button
-                          key={version.id}
-                          onClick={() => {
-                            setCarInfo((prev) => ({
-                              ...prev,
-                              version_id: version.id,
-                              version_name: version.name,
-                              year: version.year,
-                            }));
-                            setFormData((prev) => ({
-                              ...prev,
-                              engine_type_id: version.engine_type_id?.toString() || "",
-                              transmission_id: version.transmission_id?.toString() || "",
-                              capacity: version.cc?.toString() || "",
-                            }));
-                            if (version.features && Array.isArray(version.features)) {
-                              const featureIds = version.features.map((f: Feature) => f.id);
-                              setSelectedFeatures(featureIds);
-                            } else {
-                              setSelectedFeatures([]);
-                            }
-                          }}
-                          className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${
-                            carInfo.version_id === version.id
-                              ? 'border-blue-600 bg-blue-50 text-blue-900'
-                              : 'border-gray-200 hover:border-blue-400 text-gray-700'
-                          }`}
-                        >
-                          <div>{version.name}</div>
-                          <div className="text-xs text-gray-600 font-normal">{version.cc} CC</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Column 5: Summary & Confirm */}
-              {carInfo.version_id && (
-                <div className="flex flex-col">
-                  <div className="mb-4">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Summary</h4>
-                    <p className="text-sm text-gray-600">Confirm</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-200 flex-grow flex flex-col">
-                    <div className="space-y-3 flex-grow">
-                      <div className="border-b border-blue-200 pb-2">
-                        <div className="text-xs text-gray-600 font-medium">YEAR</div>
-                        <div className="text-sm font-semibold text-gray-900">{carInfo.year}</div>
-                      </div>
-                      <div className="border-b border-blue-200 pb-2">
-                        <div className="text-xs text-gray-600 font-medium">MAKE</div>
-                        <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.make_name}</div>
-                      </div>
-                      <div className="border-b border-blue-200 pb-2">
-                        <div className="text-xs text-gray-600 font-medium">MODEL</div>
-                        <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.model_name}</div>
-                      </div>
-                      <div className="pb-2">
-                        <div className="text-xs text-gray-600 font-medium">VERSION</div>
-                        <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.version_name}</div>
-                      </div>
-                    </div>
+                {/* Footer Back Button */}
+                {step > 1 && (
+                  <div className="border-t border-gray-200 p-6">
                     <button
-                      onClick={() => setShowCarPopup(false)}
-                      className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-2 rounded-lg font-semibold text-sm hover:from-blue-700 hover:to-blue-600 transition-all"
+                      onClick={() => setStep(step - 1)}
+                      className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      ✓ Confirm
+                      ← Back
                     </button>
                   </div>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Large Screen: Multi Column Layout */}
+                {/* Header */}
+                <div className="flex justify-between items-center border-b border-gray-200 p-6">
+                  <div>
+                    <h3 className="text-2xl font-semibold text-gray-900">
+                      Select Your Car
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Choose Year, Make, Model & Version
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowCarPopup(false)}
+                    className="w-10 h-10 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
+                  >
+                    ✕
+                  </button>
                 </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  </div>
-)}
 
-    <Footer />
+                {/* Body - Multi Column Layout */}
+                <div className="car-modal-body p-6">
+                  <div className="grid grid-cols-5 gap-4">
+
+                    {/* Column 1: Year Selection */}
+                    <div className="flex flex-col">
+                      <div className="mb-4">
+                        <h4 className="text-lg font-semibold text-gray-900 mb-1">Year</h4>
+                        <p className="text-sm text-gray-600">Select year</p>
+                      </div>
+                      <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        {YEARS.map((year) => (
+                          <button
+                            key={year}
+                            onClick={() => {
+                              setCarInfo({
+                                year: year,
+                                make_id: null,
+                                make_name: "",
+                                model_id: null,
+                                model_name: "",
+                                version_id: null,
+                                version_name: "",
+                              });
+                            }}
+                            className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${carInfo.year === year
+                              ? 'border-blue-600 bg-blue-50 text-blue-900'
+                              : 'border-gray-200 hover:border-blue-400 text-gray-700'
+                              }`}
+                          >
+                            {year}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Column 2: Make Selection */}
+                    {carInfo.year && (
+                      <div className="flex flex-col">
+                        <div className="mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-1">Make</h4>
+                          <p className="text-sm text-gray-600">Select brand</p>
+                        </div>
+                        <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                          {makes.map((make) => (
+                            <button
+                              key={make.id}
+                              onClick={async () => {
+                                setCarInfo(prev => ({ ...prev, make_id: make.id, make_name: make.name, model_id: null, model_name: "", version_id: null, version_name: "" }));
+                                setIsLoadingModels(true);
+                                const modelData = await getPublicModels(make.id);
+                                setModels(modelData);
+                                setIsLoadingModels(false);
+                              }}
+                              className={`w-full px-3 py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${carInfo.make_id === make.id
+                                ? 'border-blue-600 bg-blue-50'
+                                : 'border-gray-200 hover:border-blue-400'
+                                }`}
+                            >
+                              {make.logo && (
+                                <img src={make.logo} alt={make.name} className="w-6 h-6 object-contain" />
+                              )}
+                              <span className={`font-medium text-sm ${carInfo.make_id === make.id ? 'text-blue-900' : 'text-gray-700'}`}>
+                                {make.name}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Column 3: Model Selection */}
+                    {carInfo.make_id && (
+                      <div className="flex flex-col">
+                        <div className="mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-1">Model</h4>
+                          <p className="text-sm text-gray-600">Select model</p>
+                        </div>
+                        {isLoadingModels ? (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                            {models.map((model) => (
+                              <button
+                                key={model.id}
+                                onClick={async () => {
+                                  setCarInfo((prev) => ({
+                                    ...prev,
+                                    model_id: model.id,
+                                    model_name: model.name,
+                                    version_id: null,
+                                    version_name: "",
+                                  }));
+                                  setIsLoadingVersions(true);
+                                  const versionData = await getPublicVersions(model.id);
+                                  setVersions(versionData);
+                                  setIsLoadingVersions(false);
+                                }}
+                                className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${carInfo.model_id === model.id
+                                  ? 'border-blue-600 bg-blue-50 text-blue-900'
+                                  : 'border-gray-200 hover:border-blue-400 text-gray-700'
+                                  }`}
+                              >
+                                {model.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Column 4: Version Selection */}
+                    {carInfo.model_id && (
+                      <div className="flex flex-col">
+                        <div className="mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-1">Version</h4>
+                          <p className="text-sm text-gray-600">Select version</p>
+                        </div>
+                        {isLoadingVersions ? (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                            {versions.map((version) => (
+                              <button
+                                key={version.id}
+                                onClick={() => {
+                                  setCarInfo((prev) => ({
+                                    ...prev,
+                                    version_id: version.id,
+                                    version_name: version.name,
+                                    year: version.year,
+                                  }));
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    engine_type_id: version.engine_type_id?.toString() || "",
+                                    transmission_id: version.transmission_id?.toString() || "",
+                                    capacity: version.cc?.toString() || "",
+                                  }));
+                                  if (version.features && Array.isArray(version.features)) {
+                                    const featureIds = version.features.map((f: Feature) => f.id);
+                                    setSelectedFeatures(featureIds);
+                                  } else {
+                                    setSelectedFeatures([]);
+                                  }
+                                }}
+                                className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${carInfo.version_id === version.id
+                                  ? 'border-blue-600 bg-blue-50 text-blue-900'
+                                  : 'border-gray-200 hover:border-blue-400 text-gray-700'
+                                  }`}
+                              >
+                                <div>{version.name}</div>
+                                <div className="text-xs text-gray-600 font-normal">{version.cc} CC</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Column 5: Summary & Confirm */}
+                    {carInfo.version_id && (
+                      <div className="flex flex-col">
+                        <div className="mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-1">Summary</h4>
+                          <p className="text-sm text-gray-600">Confirm</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-200 flex-grow flex flex-col">
+                          <div className="space-y-3 flex-grow">
+                            <div className="border-b border-blue-200 pb-2">
+                              <div className="text-xs text-gray-600 font-medium">YEAR</div>
+                              <div className="text-sm font-semibold text-gray-900">{carInfo.year}</div>
+                            </div>
+                            <div className="border-b border-blue-200 pb-2">
+                              <div className="text-xs text-gray-600 font-medium">MAKE</div>
+                              <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.make_name}</div>
+                            </div>
+                            <div className="border-b border-blue-200 pb-2">
+                              <div className="text-xs text-gray-600 font-medium">MODEL</div>
+                              <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.model_name}</div>
+                            </div>
+                            <div className="pb-2">
+                              <div className="text-xs text-gray-600 font-medium">VERSION</div>
+                              <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.version_name}</div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setShowCarPopup(false)}
+                            className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-2 rounded-lg font-semibold text-sm hover:from-blue-700 hover:to-blue-600 transition-all"
+                          >
+                            ✓ Confirm
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      <FeatureModal
+        isOpen={showFeaturePlans}
+        onClose={() => setShowFeaturePlans(false)}
+        onSelectPlan={(plan) => {
+          setSelectedPlanId(plan.id);
+          setSelectedPlan(plan);
+          setShowFeaturePlans(false);
+          // Refresh credits in case plan grants immediate feedback (optional)
+          checkUserCredits();
+        }}
+        selectedPlanId={selectedPlanId}
+      />
+
+      <Footer />
     </>
   );
 }
@@ -1589,7 +1779,7 @@ function StepGrid<T = any>({ title, subtitle, data, onSelect, isMakeStep = false
           const logoUrl = isMakeStep && item.logo ? item.logo : null;
           const itemKey = String(item.id ?? item);
           const imageFailed = failedImages.has(itemKey);
-          
+
           return (
             <button
               key={itemKey}

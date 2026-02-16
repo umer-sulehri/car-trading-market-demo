@@ -108,7 +108,7 @@ export default function FeaturedCarsPage() {
         {/* Credits Card */}
         {credits && (
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 mb-8 text-white">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4">
                 <div className="bg-blue-400 bg-opacity-30 p-4 rounded-full">
                   <TrendingUp size={32} />
@@ -121,9 +121,17 @@ export default function FeaturedCarsPage() {
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-xl font-semibold">Ready to Feature</p>
-                <p className="text-sm text-blue-100">Feature your cars with credits</p>
+              <div className="flex flex-col items-end gap-3">
+                <div className="text-right">
+                  <p className="text-xl font-semibold">Ready to Feature</p>
+                  <p className="text-sm text-blue-100">Feature your cars with credits</p>
+                </div>
+                <a
+                  href="/feature-plans"
+                  className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 duration-200"
+                >
+                  Buy More Credits
+                </a>
               </div>
             </div>
           </div>
@@ -133,21 +141,19 @@ export default function FeaturedCarsPage() {
         <div className="flex gap-4 mb-6">
           <button
             onClick={() => setActiveTab("active")}
-            className={`px-6 py-3 rounded-lg font-medium transition ${
-              activeTab === "active"
+            className={`px-6 py-3 rounded-lg font-medium transition ${activeTab === "active"
                 ? "bg-blue-600 text-white"
                 : "bg-white text-gray-700 hover:bg-gray-50"
-            }`}
+              }`}
           >
             Active Featured ({activeFeaturedCars.length})
           </button>
           <button
             onClick={() => setActiveTab("history")}
-            className={`px-6 py-3 rounded-lg font-medium transition ${
-              activeTab === "history"
+            className={`px-6 py-3 rounded-lg font-medium transition ${activeTab === "history"
                 ? "bg-blue-600 text-white"
                 : "bg-white text-gray-700 hover:bg-gray-50"
-            }`}
+              }`}
           >
             History ({expiredCars.length})
           </button>
@@ -260,11 +266,10 @@ export default function FeaturedCarsPage() {
 
                         {/* Expiration */}
                         <div
-                          className={`flex items-center gap-2 p-2 rounded-lg mb-4 ${
-                            isExpiringSoon
+                          className={`flex items-center gap-2 p-2 rounded-lg mb-4 ${isExpiringSoon
                               ? "bg-red-50 text-red-700"
                               : "bg-green-50 text-green-700"
-                          }`}
+                            }`}
                         >
                           <Clock size={16} />
                           <span className="text-sm font-medium">

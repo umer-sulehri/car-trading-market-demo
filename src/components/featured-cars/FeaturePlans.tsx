@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './FeaturePlans.module.css';
+import { featuredCarsAPI } from '@/src/services/featuredCarsAPI';
 
 interface FeaturePlan {
     id: number;
@@ -38,17 +39,8 @@ export const FeaturePlans: React.FC<FeaturePlansProps> = ({
     const fetchPlans = async () => {
         try {
             setIsLoading(true);
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/feature-plans`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            if (!response.ok) throw new Error('Failed to fetch plans');
-
-            const data = await response.json();
-            setPlans(data.data || []);
+            const response = await featuredCarsAPI.getPlans();
+            setPlans(response.data || []);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load plans');
         } finally {

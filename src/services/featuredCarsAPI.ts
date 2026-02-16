@@ -12,6 +12,11 @@ export const featuredCarsAPI = {
         return apiClient.get(`/feature-plans/${planId}`);
     },
 
+    // Purchase a plan and get credits
+    purchasePlan: async (planId: number) => {
+        return apiClient.post(`/feature-plans/${planId}/purchase`);
+    },
+
     // Get user's featured listings
     getUserFeaturedListings: async () => {
         return apiClient.get('/featured-listings');
@@ -23,8 +28,13 @@ export const featuredCarsAPI = {
     },
 
     // Create featured listing using credits
-    createFeatureWithCredits: async (carId: number, planId: number) => {
-        return apiClient.post('/featured-listings', { car_id: carId, plan_id: planId });
+    createFeatureWithCredits: async (carId: number, planId?: number) => {
+        const payload: any = { car_id: carId };
+        // Only include plan_id if it's provided and not 0
+        if (planId && planId > 0) {
+            payload.plan_id = planId;
+        }
+        return apiClient.post('/featured-listings', payload);
     },
 
     // Get Stripe payment intent
