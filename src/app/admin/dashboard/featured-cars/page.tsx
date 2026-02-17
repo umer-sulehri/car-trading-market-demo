@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Eye, EyeOff, TrendingUp, Calendar, DollarSign } from "lucide-react";
+import { featuredCarsAPI } from "@/src/services/featuredCarsAPI";
 
 interface FeaturedCar {
   id: number;
@@ -48,12 +49,22 @@ export default function FeaturedCarsPage() {
   const fetchFeaturedCars = async () => {
     try {
       setLoading(true);
-      // This would need an admin API endpoint to get all featured cars
-      // const response = await adminAPI.getFeaturedCars();
-      // setFeaturedCars(response.data || []);
+      const response = await featuredCarsAPI.adminGetFeaturedListings();
 
-      // Mock data for demonstration
-      setFeaturedCars([]);
+      if (response.success) {
+        // Handle paginated data - response.data is the paginator object
+        let data = [];
+        if (response.data && Array.isArray(response.data.data)) {
+          data = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          data = response.data;
+        } else if (response.data && response.data.items && Array.isArray(response.data.items)) {
+          // Fallback for some common pagination formats
+          data = response.data.items;
+        }
+
+        setFeaturedCars(data);
+      }
     } catch (error) {
       console.error("Error fetching featured cars:", error);
     } finally {
@@ -176,7 +187,7 @@ export default function FeaturedCarsPage() {
                       <td className="px-6 py-4">
                         <div>
                           <p className="font-medium text-gray-900">
-                            {featured.car.title}
+                            {featured.car?.title || "Unknown Car"}
                           </p>
                           <p className="text-sm text-gray-600">
                             Car ID: {featured.car_id}
@@ -186,10 +197,10 @@ export default function FeaturedCarsPage() {
                       <td className="px-6 py-4">
                         <div>
                           <p className="font-medium text-gray-900">
-                            {featured.user.name}
+                            {featured.user?.name || "Unknown User"}
                           </p>
                           <p className="text-sm text-gray-600">
-                            {featured.user.email}
+                            {featured.user?.email || "No email"}
                           </p>
                         </div>
                       </td>
@@ -197,32 +208,31 @@ export default function FeaturedCarsPage() {
                         <div
                           className="inline-block px-3 py-1 rounded text-white font-semibold text-sm"
                           style={{
-                            backgroundColor: featured.plan.border_color,
+                            backgroundColor: featured.plan?.border_color || "#cbd5e1",
                           }}
                         >
-                          {featured.plan.name}
+                          {featured.plan?.name || "No Plan"}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            featured.status === "active"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
+                          className={`px-3 py-1 rounded-full text-sm font-semibold ${featured.status === "active"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                            }`}
                         >
-                          {featured.status.toUpperCase()}
+                          {(featured.status || "UNKNOWN").toUpperCase()}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-gray-700">
                         <div className="flex items-center gap-2">
                           <Calendar size={16} className="text-gray-400" />
-                          {new Date(featured.starts_at).toLocaleDateString()} -{" "}
-                          {new Date(featured.expires_at).toLocaleDateString()}
+                          {featured.starts_at ? new Date(featured.starts_at).toLocaleDateString() : "N/A"} -{" "}
+                          {featured.expires_at ? new Date(featured.expires_at).toLocaleDateString() : "N/A"}
                         </div>
                       </td>
                       <td className="px-6 py-4 font-semibold text-gray-900">
-                        Rs {featured.amount_paid?.toLocaleString()}
+                        Rs {featured.amount_paid?.toLocaleString() || 0}
                       </td>
                     </tr>
                   ))}

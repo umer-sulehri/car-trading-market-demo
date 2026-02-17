@@ -109,5 +109,15 @@ export const featuredCarsAPI = {
     // Admin: Delete plan
     adminDeletePlan: async (planId: number) => {
         return apiClient.delete(`/admin/feature-plans/${planId}`);
+    },
+
+    // Admin: Get all featured listings
+    adminGetFeaturedListings: async (page: number = 1) => {
+        return apiClient.get(`/admin/featured-listings?page=${page}`);
+    },
+
+    // Public: Get featured listings for homepage slider
+    getPublicFeaturedListings: async () => {
+        return apiClient.get('/featured-cars/public');
     }
 };

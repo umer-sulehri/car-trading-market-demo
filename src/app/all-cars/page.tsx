@@ -17,6 +17,7 @@ import {
   Phone,
   Heart,
   ChevronDown,
+  Star,
 } from "lucide-react";
 import { addToFavorites, removeFromFavorites, getFavoriteCars } from "@/src/services/favorite.service";
 import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
@@ -46,6 +47,15 @@ interface SellCar {
   images?: string[];
   media?: Array<{ image: string }>;
   user_id?: number;
+  featured_listing?: {
+    id: number;
+    plan: {
+      name: string;
+      border_color: string;
+      top_listing: boolean;
+      urgent_badge: boolean;
+    };
+  };
 }
 
 const AllCars: React.FC = () => {
@@ -126,13 +136,13 @@ const AllCars: React.FC = () => {
     try {
       const isAuth = await isUserAuthenticated();
       setIsAuthenticated(isAuth);
-      
+
       if (isAuth) {
         // Load favorite cars for this user
         const favoriteCars = await getFavoriteCars();
         const favoriteIds = new Set<number>(
-          Array.isArray(favoriteCars) 
-            ? favoriteCars.map((car: any) => car.id as number) 
+          Array.isArray(favoriteCars)
+            ? favoriteCars.map((car: any) => car.id as number)
             : ((favoriteCars as any)?.data || []).map((car: any) => car.id as number)
         );
         setFavorited(favoriteIds);
@@ -148,22 +158,22 @@ const AllCars: React.FC = () => {
       setLoading(true);
       // apiClient already returns res.data directly (see interceptor)
       const response = await apiClient.get("/sell-cars");
-      
+
       // Handle paginated response structure
-      const data = Array.isArray(response) 
-        ? response 
+      const data = Array.isArray(response)
+        ? response
         : response?.data || [];
-      
+
       const approvedCars = data
         .filter((car: any) => car.status === "approved")
         .map((car: any) => ({
           ...car,
           phone: car.seller_phone,
-          images: car.media?.length > 0 
-            ? car.media.map((m: any) => m.image || m.media_path) 
+          images: car.media?.length > 0
+            ? car.media.map((m: any) => m.image || m.media_path)
             : [],
         }));
-      
+
       setCars(approvedCars);
       setFilteredCars(approvedCars);
     } catch (error) {
@@ -368,11 +378,11 @@ const AllCars: React.FC = () => {
 
   const toggleFavorite = async (e: React.MouseEvent, carId: number) => {
     e.stopPropagation();
-    
+
     // Check authentication AGAIN right here (not just relying on state)
     const isAuth = await isUserAuthenticated();
     console.log("🔍 Favorite Button Clicked - Auth Check:", isAuth);
-    
+
     if (!isAuth) {
       console.log("❌ Not authenticated, redirecting to login");
       router.push("/auth/login");
@@ -851,15 +861,30 @@ const AllCars: React.FC = () => {
                   <div
                     key={car.id}
                     onClick={() => handleClick(car.id)}
-                    className="bg-white rounded-2xl overflow-hidden 
-                               shadow-sm hover:shadow-xl hover:-translate-y-1 
-                               transition-all cursor-pointer relative"
+                    className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer relative ${car.featured_listing ? "border-t-[6px]" : ""
+                      }`}
+                    style={car.featured_listing?.plan ? { borderColor: car.featured_listing.plan.border_color } : {}}
                   >
+                    {/* FEATURED & URGENT BADGES */}
+                    <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+                      {car.featured_listing && (
+                        <div className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg flex items-center gap-1">
+                          <Star size={12} fill="currentColor" />
+                          FEATURED
+                        </div>
+                      )}
+                      {car.featured_listing?.plan?.urgent_badge && (
+                        <div className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg">
+                          URGENT
+                        </div>
+                      )}
+                    </div>
+
                     {/* FAVORITE BUTTON */}
                     <button
                       onClick={(e) => toggleFavorite(e, car.id)}
                       className="absolute top-3 right-3 z-10 p-2 rounded-full 
-                                 bg-white shadow-md hover:shadow-lg transition-all"
+                                   bg-white shadow-md hover:shadow-lg transition-all"
                     >
                       <Heart
                         size={20}
@@ -906,37 +931,36 @@ const AllCars: React.FC = () => {
                           </div>
                         )}
                       </div>
-<div className="mt-4 space-y-2">
-  <div className="flex justify-between items-center">
-    <p className="text-blue-600 font-semibold">
-      PKR {car.price.toLocaleString()}
-    </p>
+                      <div className="mt-4 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <p className="text-blue-600 font-semibold">
+                            PKR {car.price.toLocaleString()}
+                          </p>
 
-    <span
-      className={`text-xs px-2 py-1 rounded-full capitalize ${
-        car.status === "approved"
-          ? "bg-green-100 text-green-600"
-          : "bg-gray-100 text-gray-600"
-      }`}
-    >
-      {car.status}
-    </span>
-  </div>
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full capitalize ${car.status === "approved"
+                              ? "bg-green-100 text-green-600"
+                              : "bg-gray-100 text-gray-600"
+                              }`}
+                          >
+                            {car.status}
+                          </span>
+                        </div>
 
-  {/* ✅ SHOW ONLY IF APPROVED */}
-  {car.status === "approved" && (
-    <a
-      href={`tel:${car.phone || car.seller_phone}`}
-      onClick={(e) => e.stopPropagation()}
-      className="block text-center text-sm font-medium
+                        {/* ✅ SHOW ONLY IF APPROVED */}
+                        {car.status === "approved" && (
+                          <a
+                            href={`tel:${car.phone || car.seller_phone}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="block text-center text-sm font-medium
                  bg-gradient-to-r from-blue-600 to-blue-500
                  text-white py-2 rounded-xl
                  hover:opacity-90 transition"
-    >
-      Call Seller
-    </a>
-  )}
-</div>
+                          >
+                            Call Seller
+                          </a>
+                        )}
+                      </div>
 
                     </div>
                   </div>
