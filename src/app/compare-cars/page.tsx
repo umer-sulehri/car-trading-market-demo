@@ -13,7 +13,7 @@ import { getPublicByModel as getModelMedia } from '@/src/services/newCarMedia.se
 import Link from 'next/link';
 import Navbar from '@/src/components/Navbar';
 import Footer from '@/src/components/Footer';
-import { ChevronLeft, X } from 'lucide-react';
+import { ChevronLeft, X, Plus, Search, Car, CheckCircle2, AlertCircle, Trash2, HelpCircle, Info, ArrowLeftRight, Star, ChevronDown } from 'lucide-react';
 
 interface Make {
     id: number;
@@ -37,7 +37,7 @@ interface Version {
     engine_type?: string;
     engineType?: { id: number; name: string };
     transmission?: { id: number; name: string };
-   body_type?: { id: number; name: string } | string;
+    body_type?: { id: number; name: string } | string;
 
 }
 
@@ -54,15 +54,23 @@ interface ComparisonCar {
 
 const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019, 2018];
 
-export default function CompareCarsPage() {
+const getStringFromValue = (value: any): string => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && value?.name) return String((value as any).name);
+    if (typeof value === 'number') return String(value);
+    return '';
+};
+
+export default function CompareCars() {
     const [makes, setMakes] = useState<Make[]>([]);
     const [models, setModels] = useState<CarModel[]>([]);
     const [versions, setVersions] = useState<Version[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showDifferencesOnly, setShowDifferencesOnly] = useState(false);
 
     const [comparisonCars, setComparisonCars] = useState<ComparisonCar[]>([]);
-    
+
     // Modal state
     const [showCarPopup, setShowCarPopup] = useState(false);
     const [step, setStep] = useState<number>(1);
@@ -82,15 +90,9 @@ export default function CompareCarsPage() {
     const [isLoadingVersions, setIsLoadingVersions] = useState(false);
 
 
-    const getStringFromValue = (value: any): string => {
-        if (typeof value === 'string') return value;
-        if (typeof value === 'object' && value?.name) return String((value as any).name);
-        if (typeof value === 'number') return String(value);
-        return '';
-    };
 
     const maxCars = 3;
-    
+
     // Memoize selected version IDs to prevent infinite loops
     const selectedVersionIds = useMemo(() => comparisonCars.map(c => c.versionId), [comparisonCars]);
 
@@ -119,7 +121,7 @@ export default function CompareCarsPage() {
         const handleResize = () => {
             setIsSmallScreen(window.innerWidth < 1024);
         };
-        
+
         // Add listener
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
@@ -155,9 +157,9 @@ export default function CompareCarsPage() {
                 }
             }
         };
-        
+
         fetchModels();
-        
+
         return () => {
             isMounted = false;
         };
@@ -191,9 +193,9 @@ export default function CompareCarsPage() {
                 }
             }
         };
-        
+
         fetchVersions();
-        
+
         return () => {
             isMounted = false;
         };
@@ -265,7 +267,7 @@ export default function CompareCarsPage() {
                     const specId = spec?.specification_id || spec?.id;
                     const specName = getStringValue(spec?.name);
                     const specValue = getStringValue(spec?.value);
-                    
+
                     // Filter out invalid specifications
                     if (!specId || !specName) return null;
 
@@ -361,316 +363,346 @@ export default function CompareCarsPage() {
     return (
         <>
             <Navbar />
+            <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #e2e8f0;
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #cbd5e1;
+                }
+            `}</style>
             <div className="min-h-screen bg-white mt-20">
                 {/* Header */}
-                <div className="bg-white border-b border-gray-200 sticky top-20 z-40 shadow-sm">
-                    <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-4">
-                        <Link href="/" className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 font-semibold text-gray-700 transition">
-                            ← Back
-                        </Link>
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                Compare Cars
-                            </h1>
+                <div className="bg-white border-b border-gray-100 py-8">
+                    <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <Link href="/" className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-600 transition-all border border-gray-200">
+                                <ChevronLeft size={20} />
+                            </Link>
+                            <div>
+                                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                                    Compare <span className="text-blue-600">Cars</span>
+                                </h1>
+                                <p className="text-gray-500 text-sm mt-1">Side-by-side technical specification comparison</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-gray-400">Slots used:</span>
+                            <div className="flex gap-1.5">
+                                {[1, 2, 3].map(i => (
+                                    <div
+                                        key={i}
+                                        className={`w-3 h-3 rounded-full ${i <= comparisonCars.length ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                    />
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-6 py-8">
+                <div className="max-w-7xl mx-auto px-6 py-10">
                     {error && (
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
                             {error}
                         </div>
                     )}
 
-                    {/* Add Car Button or Cars Display */}
-                    {comparisonCars.length < maxCars && (
-                        <div className="mb-8">
-                            <button
-                                onClick={openCarModal}
-                                className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition"
-                            >
-                                + Add Car {comparisonCars.length + 1}
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Cars Overview */}
-                    {comparisonCars.length > 0 && (
-                        <div className="bg-white rounded-lg border border-gray-200 p-8 mb-8">
-                            <div className={`grid gap-8 ${comparisonCars.length === 1 ? 'grid-cols-1' : comparisonCars.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-                                {comparisonCars.map((car, idx) => (
-                                    <div key={idx} className="text-center">
-                                        {/* Car Image */}
-                                        <div className="h-48 bg-gray-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden border border-gray-200">
-                                            {car.media.length > 0 ? (
-                                                <img
-                                                    src={car.media[0].url}
-                                                    alt={car.version.name}
-                                                    className="w-full h-full object-contain"
-                                                />
-                                            ) : (
-                                                <div className="text-gray-400">No Image</div>
-                                            )}
-                                        </div>
-
-                                        {/* Car Name */}
-                                        <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                                            {car.make?.name || 'Unknown'}
-                                        </h2>
-                                        <p className="text-xl font-semibold text-gray-700 mb-1">
-                                            {car.model?.name || 'Unknown'}
-                                        </p>
-                                        <p className="text-sm text-gray-600 mb-4">
-                                            {car.version.name}
-                                        </p>
-
+                    {/* Cars Overview Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                        {[0, 1, 2].map((idx) => (
+                            <div key={idx} className="relative group">
+                                {comparisonCars[idx] ? (
+                                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 h-full flex flex-col">
                                         {/* Remove Button */}
                                         <button
                                             onClick={() => handleRemoveCar(idx)}
-                                            className="text-red-600 hover:text-red-800 text-sm font-semibold"
+                                            className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 shadow-md text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                                            title="Remove Car"
                                         >
-                                            Remove
+                                            <Trash2 size={18} />
                                         </button>
-                                    </div>
-                                ))}
-                            </div>
 
-                            {/* Add 3rd Car Button */}
-                            {comparisonCars.length === 2 && (
-                                <div className="mt-8 pt-8 border-t border-gray-200 text-center">
-                                    <button
+                                        {/* Image Area */}
+                                        <div className="h-44 bg-linear-to-b from-gray-50 to-white flex items-center justify-center p-4 border-b border-gray-100 relative overflow-hidden">
+                                            {comparisonCars[idx].media.length > 0 ? (
+                                                <img
+                                                    src={comparisonCars[idx].media[0].url}
+                                                    alt={comparisonCars[idx].version.name}
+                                                    className="max-w-full max-h-full object-contain drop-shadow-lg scale-110"
+                                                />
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center text-gray-300">
+                                                    <Car size={48} className="mb-2 opacity-20" />
+                                                    <span className="text-xs uppercase tracking-wider font-bold opacity-30">No Preview</span>
+                                                </div>
+                                            )}
+
+                                            <div className="absolute bottom-3 left-3">
+                                                <span className="bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-tighter">
+                                                    Car {idx + 1}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Info Area */}
+                                        <div className="p-5 flex-1 flex flex-col">
+                                            <div className="mb-3">
+                                                <div className="text-sm font-bold text-blue-600 uppercase tracking-widest mb-1">
+                                                    {comparisonCars[idx].make?.name}
+                                                </div>
+                                                <h3 className="text-xl font-extrabold text-gray-900 leading-tight">
+                                                    {comparisonCars[idx].model?.name}
+                                                </h3>
+                                            </div>
+                                            <div className="mt-auto">
+                                                <div className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
+                                                    {comparisonCars[idx].version.name}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div
                                         onClick={openCarModal}
-                                        className="px-8 py-3 border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition"
+                                        className="bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 h-full flex flex-col items-center justify-center p-8 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-300 group/btn"
                                     >
-                                        + Add 3rd Car to Compare
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                        <div className="w-16 h-16 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center mb-4 group-hover/btn:scale-110 group-hover/btn:text-blue-600 transition-all">
+                                            <Plus size={32} strokeWidth={1.5} />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-gray-900 font-bold mb-1">Add Car {idx + 1}</p>
+                                            <p className="text-gray-400 text-xs px-4">Select a vehicle to start side-by-side comparison</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {idx < 2 && idx < (comparisonCars.length || 0) && (
+                                    <div className="hidden lg:flex absolute -right-6 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white shadow-lg border border-gray-100 items-center justify-center pointer-events-none">
+                                        <span className="text-blue-600 font-black italic tracking-tighter text-lg">VS</span>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
 
                     {/* Comparison View */}
                     {comparisonCars.length >= 2 && (
-                        <div className="space-y-8">
-                            {/* Specifications Section */}
-                            <div className="bg-white border border-gray-200 rounded-lg p-8">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-6">Compare Specifications</h2>
-
-                                {/* Basic Specifications Table */}
-                                <div className="overflow-x-auto mb-8">
-                                    <table className="w-full border border-gray-200">
-                                        <thead>
-                                            <tr className="bg-gray-50 border-b border-gray-200">
-                                                <th className="px-6 py-4 text-left font-semibold text-gray-900">Specification</th>
-                                                {comparisonCars.map((car, idx) => (
-                                                    <th key={idx} className="px-6 py-4 text-center font-semibold text-gray-900">
-                                                        {car.make?.name} {car.model?.name}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {/* Year */}
-                                            <tr className="border-b border-gray-200 hover:bg-gray-50">
-                                                <td className="px-6 py-4 font-semibold text-gray-900">Year</td>
-                                                {comparisonCars.map((car, idx) => (
-                                                    <td key={idx} className="px-6 py-4 text-center text-gray-700">
-                                                        {car.version.year || 'N/A'}
-                                                    </td>
-                                                ))}
-                                            </tr>
-
-                                            {/* Body Type */}
-                                            <tr className="border-b border-gray-200 hover:bg-gray-50">
-                                                <td className="px-6 py-4 font-semibold text-gray-900">Body Type</td>
-                                                {comparisonCars.map((car, idx) => (
-                                                    <td key={idx} className="px-6 py-4 text-center text-gray-700">
-                                                       {typeof car.version.body_type === "string"
-  ? car.version.body_type
-  : car.version.body_type?.name || 'N/A'}
-
-                                                    </td>
-                                                ))}
-                                            </tr>
-
-                                            {/* Engine Type */}
-                                            <tr className="border-b border-gray-200 hover:bg-gray-50">
-                                                <td className="px-6 py-4 font-semibold text-gray-900">Engine Type</td>
-                                                {comparisonCars.map((car, idx) => (
-                                                    <td key={idx} className="px-6 py-4 text-center text-gray-700">
-                                                        {car.version.engineType?.name || car.version.engine_type || 'N/A'}
-                                                    </td>
-                                                ))}
-                                            </tr>
-
-                                            {/* Engine Capacity */}
-                                            <tr className="border-b border-gray-200 hover:bg-gray-50">
-                                                <td className="px-6 py-4 font-semibold text-gray-900">Engine Capacity</td>
-                                                {comparisonCars.map((car, idx) => (
-                                                    <td key={idx} className="px-6 py-4 text-center text-gray-700 font-mono">
-                                                        {car.version.cc ? `${car.version.cc} CC` : 'N/A'}
-                                                    </td>
-                                                ))}
-                                            </tr>
-
-                                            {/* Transmission */}
-                                            <tr className="border-b border-gray-200 hover:bg-gray-50">
-                                                <td className="px-6 py-4 font-semibold text-gray-900">Transmission</td>
-                                                {comparisonCars.map((car, idx) => (
-                                                    <td key={idx} className="px-6 py-4 text-center text-gray-700">
-                                                        {car.version.transmission?.name || 'N/A'}
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                        <div className="relative">
+                            {/* Sticky Header for Table */}
+                            <div className="sticky top-[80px] z-30 bg-white/95 backdrop-blur-sm border-y border-gray-100 shadow-md -mx-6 px-6 py-4 flex items-center transition-all">
+                                <div className="w-1/4 pr-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2 text-gray-400">
+                                            <ArrowLeftRight size={16} />
+                                            <span className="text-[10px] font-bold uppercase tracking-widest">Comparison</span>
+                                        </div>
+                                        {comparisonCars.length > 1 && (
+                                            <button
+                                                onClick={() => setShowDifferencesOnly(!showDifferencesOnly)}
+                                                className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border ${showDifferencesOnly
+                                                    ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                                                    : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200 hover:text-blue-600'
+                                                    }`}
+                                            >
+                                                <div className={`w-1.5 h-1.5 rounded-full ${showDifferencesOnly ? 'bg-white animate-pulse' : 'bg-gray-200'}`} />
+                                                Show Differences
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
+                                <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-6">
+                                    {comparisonCars.map((car, idx) => (
+                                        <div key={idx} className="flex items-center gap-3 overflow-hidden">
+                                            <div className="w-8 h-8 rounded bg-gray-100 flex-shrink-0 flex items-center justify-center p-1">
+                                                {car.media.length > 0 ? (
+                                                    <img src={car.media[0].url} className="w-full h-full object-contain" />
+                                                ) : <Car size={14} className="text-gray-400" />}
+                                            </div>
+                                            <div className="truncate">
+                                                <div className="text-[10px] font-bold text-blue-600 truncate uppercase tracking-tighter">{car.make?.name}</div>
+                                                <div className="text-xs font-black text-gray-900 truncate">{car.model?.name}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {comparisonCars.length === 2 && <div className="hidden md:block"></div>}
+                                </div>
+                            </div>
 
-                                {/* Technical Specifications */}
-                                {comparisonCars.some(car => car.specifications.length > 0) && (
-                                    <div className="mb-8">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-4">Detailed Specifications</h3>
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full border border-gray-200">
-                                                <thead>
-                                                    <tr className="bg-gray-50 border-b border-gray-200">
-                                                        <th className="px-6 py-4 text-left font-semibold text-gray-900">Specification</th>
-                                                        {comparisonCars.map((car, idx) => (
-                                                            <th key={idx} className="px-6 py-4 text-center font-semibold text-gray-900">
-                                                                {car.model?.name || 'Model'}
-                                                            </th>
+                            {/* Specification Table */}
+                            <div className="mt-8 space-y-12">
+                                {/* Basic Specs */}
+                                <section>
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                                            <Info size={20} />
+                                        </div>
+                                        <h2 className="text-xl font-black text-gray-900">General Overview</h2>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                                        {[
+                                            { label: 'Year', key: 'year', icon: <Star size={14} /> },
+                                            { label: 'Body Type', key: 'body_type', icon: <Car size={14} /> },
+                                            { label: 'Engine', key: 'engine_type', icon: <Info size={14} /> },
+                                            { label: 'Capacity', key: 'cc', icon: <ArrowLeftRight size={14} /> },
+                                            { label: 'Transmission', key: 'transmission', icon: <ChevronDown size={14} /> }
+                                        ].map((row, rowIdx) => {
+                                            const values = comparisonCars.map(car => {
+                                                if (row.key === 'year') return car.version.year?.toString() || '-';
+                                                if (row.key === 'body_type') return getStringFromValue(car.version.body_type) || '-';
+                                                if (row.key === 'engine_type') return getStringFromValue(car.version.engine_type) || '-';
+                                                if (row.key === 'cc') return car.version.cc?.toString() || '-';
+                                                if (row.key === 'transmission') return getStringFromValue(car.version.transmission) || '-';
+                                                return '-';
+                                            });
+                                            const isDifferent = comparisonCars.length > 1 && new Set(values).size > 1;
+
+                                            return (
+                                                <div key={rowIdx} className={`flex items-stretch border-b last:border-0 border-gray-50 transition-colors ${showDifferencesOnly && isDifferent ? 'bg-orange-50/50' : rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'} hover:bg-gray-100/50`}>
+                                                    <div className="w-1/4 p-5 flex items-center gap-3 border-r border-gray-50">
+                                                        <span className={`${showDifferencesOnly && isDifferent ? 'text-orange-500' : 'text-gray-400'}`}>{row.icon}</span>
+                                                        <span className={`text-sm font-bold ${showDifferencesOnly && isDifferent ? 'text-orange-900' : 'text-gray-600'}`}>{row.label}</span>
+                                                    </div>
+                                                    <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-6 p-5">
+                                                        {comparisonCars.map((car, carIdx) => (
+                                                            <div key={carIdx} className={`text-sm font-bold ${showDifferencesOnly && isDifferent ? 'text-orange-900 italic' : 'text-gray-900'}`}>
+                                                                {values[carIdx]}
+                                                            </div>
                                                         ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {comparisonCars[0].specifications.map((spec, specIdx) => {
-                                                        let specName = 'Specification';
-                                                        if (typeof spec === 'string') {
-                                                            specName = spec;
-                                                        } else if (typeof spec === 'object' && spec?.name) {
-                                                            specName = typeof spec.name === 'string' ? spec.name : String(spec.name);
-                                                        }
-                                                        return (
-                                                            <tr key={spec.id || specIdx} className="border-b border-gray-200 hover:bg-gray-50">
-                                                                <td className="px-6 py-4 font-semibold text-gray-900">{specName}</td>
-                                                                {comparisonCars.map((car, carIdx) => {
-                                                                    const carSpec = car.specifications.find(s => {
-                                                                        let sName = 'Specification';
-                                                                        if (typeof s === 'string') sName = s;
-                                                                        else if (typeof s === 'object' && s?.name) sName = typeof s.name === 'string' ? s.name : String(s.name);
-                                                                        return sName === specName;
-                                                                    });
-                                                                    let specValue = '';
-                                                                    if (carSpec) {
-                                                                        if (typeof carSpec === 'string') {
-                                                                            specValue = carSpec;
-                                                                        } else if (typeof carSpec === 'object' && carSpec.value !== undefined && carSpec.value !== null) {
-                                                                            if (typeof carSpec.value === 'string') {
-                                                                                specValue = carSpec.value;
-                                                                            } else if (typeof carSpec.value === 'object') {
-                                                                                specValue = carSpec.value?.name ? String(carSpec.value.name) : '';
-                                                                            } else if (typeof carSpec.value === 'number') {
-                                                                                specValue = String(carSpec.value);
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    return (
-                                                                        <td key={carIdx} className="px-6 py-4 text-center text-gray-700">
-                                                                            {specValue || '-'}
-                                                                        </td>
-                                                                    );
-                                                                })}
-                                                            </tr>
-                                                        );
-                                                    })}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Features */}
-                                {comparisonCars.some(car => car.features.length > 0) && (
-                                    <div className="mb-8">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-4">Features & Amenities</h3>
-                                        <div className={`grid gap-8 ${comparisonCars.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-                                            {comparisonCars.map((car, idx) => (
-                                                <div key={idx}>
-                                                    <h4 className="font-semibold text-gray-900 mb-3">
-                                                        {getStringFromValue(car.model?.name) || 'Model'}
-                                                    </h4>
-                                                    {car.features.length > 0 ? (
-                                                        <ul className="space-y-2">
-                                                            {car.features
-                                                                .map((feature, featureIdx) => {
-                                                                    let featureName = '';
-                                                                    if (typeof feature === 'string') {
-                                                                        featureName = feature;
-                                                                    } else if (typeof feature === 'object' && feature?.name) {
-                                                                        featureName = typeof feature.name === 'string' ? feature.name : String(feature.name);
-                                                                    }
-                                                                    return featureName ? { key: featureIdx, name: featureName } : null;
-                                                                })
-                                                                .filter(Boolean)
-                                                                .map((featureData: any, idx: number) => (
-                                                                    <li key={idx} className="flex items-start gap-2 text-gray-700">
-                                                                        <span className="text-green-600 font-bold mt-0.5">✓</span>
-                                                                        <span>{featureData?.name}</span>
-                                                                    </li>
-                                                                ))
-                                                            }
-                                                        </ul>
-                                                    ) : (
-                                                        <p className="text-gray-400 italic">No features listed</p>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Colors */}
-                                {comparisonCars.some(car => car.colors.length > 0) && (
-                                    <div>
-                                        <h3 className="text-lg font-bold text-gray-900 mb-4">Available Colors</h3>
-                                        <div className={`grid gap-8 ${comparisonCars.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
-                                            {comparisonCars.map((car, idx) => (
-                                                <div key={idx}>
-                                                    <h4 className="font-semibold text-gray-900 mb-3">
-                                                        {getStringFromValue(car.model?.name) || 'Model'}
-                                                    </h4>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {car.colors.length > 0 ? (
-                                                            car.colors
-                                                                .map((vc, colorIdx) => {
-                                                                    let colorName = '';
-                                                                    if (typeof vc === 'string') {
-                                                                        colorName = vc;
-                                                                    } else if (typeof vc === 'object') {
-                                                                        const nameValue = vc?.color?.name || vc?.name || vc?.colorName;
-                                                                        if (typeof nameValue === 'string') {
-                                                                            colorName = nameValue;
-                                                                        } else if (typeof nameValue === 'object' && nameValue?.name) {
-                                                                            colorName = String(nameValue.name);
-                                                                        }
-                                                                    }
-                                                                    return colorName ? { key: colorIdx, name: colorName } : null;
-                                                                })
-                                                                .filter(Boolean)
-                                                                .map((colorData: any, idx: number) => (
-                                                                    <span key={idx} className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700">
-                                                                        {colorData?.name}
-                                                                    </span>
-                                                                ))
-                                                        ) : (
-                                                            <p className="text-gray-400 italic">No colors listed</p>
-                                                        )}
+                                                        {comparisonCars.length === 2 && <div className="hidden md:block"></div>}
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
+                                            );
+                                        })}
                                     </div>
+                                </section>
+
+                                {/* Features Comparison */}
+                                <section>
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
+                                            <CheckCircle2 size={20} />
+                                        </div>
+                                        <h2 className="text-xl font-black text-gray-900">Features & Amenities</h2>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        {comparisonCars.map((car, carIdx) => (
+                                            <div key={carIdx} className="bg-white rounded-2xl border border-gray-100 p-6 hover:shadow-md transition-shadow">
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                                                    <span className="text-xs font-black uppercase text-gray-400 tracking-tighter">{car.model?.name}</span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {car.features.length > 0 ? (
+                                                        car.features.slice(0, 15).map((f, i) => (
+                                                            <div key={i} className="flex items-center gap-3">
+                                                                <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
+                                                                <span className="text-sm text-gray-700 font-medium truncate">{getStringFromValue(f)}</span>
+                                                            </div>
+                                                        ))
+                                                    ) : <p className="text-gray-400 italic text-sm">No data</p>}
+                                                    {car.features.length > 15 && (
+                                                        <p className="text-xs text-blue-600 font-bold">+{car.features.length - 15} more</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {comparisonCars.length === 1 && <div className="hidden md:block"></div>}
+                                        {comparisonCars.length === 2 && <div className="hidden md:block"></div>}
+                                    </div>
+                                </section>
+
+                                {/* Technical Specs Table (Detailed) */}
+                                {comparisonCars.some(car => car.specifications.length > 0) && (
+                                    <section>
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
+                                                <ArrowLeftRight size={20} />
+                                            </div>
+                                            <h2 className="text-xl font-black text-gray-900">Technical Data</h2>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                                            {/* Get unique spec names */}
+                                            {Array.from(new Set(comparisonCars.flatMap(c => c.specifications.map(s => s.name)))).map((specName, rowIdx) => {
+                                                const values = comparisonCars.map(car => {
+                                                    const spec = car.specifications.find(s => s.name === specName);
+                                                    return getStringFromValue(spec?.value) || '-';
+                                                });
+                                                const isDifferent = comparisonCars.length > 1 && new Set(values).size > 1;
+
+                                                return (
+                                                    <div key={rowIdx} className={`flex items-stretch border-b last:border-0 border-gray-50 transition-colors ${showDifferencesOnly && isDifferent ? 'bg-orange-50/50' : rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'} hover:bg-gray-100/50`}>
+                                                        <div className="w-1/4 p-5 flex items-center gap-3 border-r border-gray-50">
+                                                            <span className={`text-sm font-bold ${showDifferencesOnly && isDifferent ? 'text-orange-900' : 'text-gray-600'}`}>{specName}</span>
+                                                        </div>
+                                                        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-6 p-5">
+                                                            {comparisonCars.map((car, carIdx) => (
+                                                                <div key={carIdx} className={`text-sm font-bold ${showDifferencesOnly && isDifferent ? 'text-orange-900 italic' : 'text-gray-900'}`}>
+                                                                    {values[carIdx]}
+                                                                </div>
+                                                            ))}
+                                                            {comparisonCars.length === 2 && <div className="hidden md:block"></div>}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </section>
+                                )}
+
+                                {/* Features Section */}
+                                {comparisonCars.length > 0 && (
+                                    <section>
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
+                                                <CheckCircle2 size={20} />
+                                            </div>
+                                            <h2 className="text-xl font-black text-gray-900">Standard Features</h2>
+                                        </div>
+
+                                        <div className="rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                                            {/* Get unique feature names */}
+                                            {Array.from(new Set(comparisonCars.flatMap(c => c.features))).map((featureName, rowIdx) => {
+                                                const featureValues = comparisonCars.map(car => car.features.includes(featureName));
+                                                const isDifferent = comparisonCars.length > 1 && new Set(featureValues).size > 1;
+
+                                                return (
+                                                    <div key={rowIdx} className={`flex items-stretch border-b last:border-0 border-gray-50 transition-colors ${showDifferencesOnly && isDifferent ? 'bg-orange-50/50' : rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/20'} hover:bg-gray-100/50`}>
+                                                        <div className="w-1/4 p-5 flex items-center gap-3 border-r border-gray-50">
+                                                            <span className={`text-sm font-bold ${showDifferencesOnly && isDifferent ? 'text-orange-900' : 'text-gray-600'}`}>{featureName}</span>
+                                                        </div>
+                                                        <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-6 p-5">
+                                                            {comparisonCars.map((car, carIdx) => (
+                                                                <div key={carIdx} className="flex justify-center md:justify-start">
+                                                                    {car.features.includes(featureName) ? (
+                                                                        <div className={`flex items-center gap-2 ${showDifferencesOnly && isDifferent ? 'text-orange-600 font-black' : 'text-green-600'}`}>
+                                                                            <CheckCircle2 size={18} />
+                                                                            <span className="text-xs uppercase tracking-tighter">Available</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex items-center gap-2 text-gray-200">
+                                                                            <X size={18} />
+                                                                            <span className="text-xs uppercase tracking-tighter">N/A</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                            {comparisonCars.length === 2 && <div className="hidden md:block"></div>}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </section>
                                 )}
                             </div>
                         </div>
@@ -693,7 +725,7 @@ export default function CompareCarsPage() {
                 {/* ===== Car Selection Modal ===== */}
                 {showCarPopup && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-96 overflow-hidden flex flex-col">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[85vh] max-h-[900px] overflow-hidden flex flex-col">
                             {/* Small Screen: Step-by-Step Design */}
                             {isSmallScreen ? (
                                 <>
@@ -716,7 +748,7 @@ export default function CompareCarsPage() {
                                     </div>
 
                                     {/* Body - Step by Step */}
-                                    <div className="flex-1 overflow-y-auto p-6">
+                                    <div className="flex-1 overflow-hidden">
                                         {step === 1 && (
                                             <StepGrid
                                                 title="Select Model Year"
@@ -802,137 +834,128 @@ export default function CompareCarsPage() {
                                 </>
                             ) : (
                                 <>
-                                    {/* Large Screen: Multi Column Layout */}
-                                    {/* Header */}
-                                    <div className="flex justify-between items-center border-b border-gray-200 p-6">
-                                        <div>
-                                            <h3 className="text-2xl font-semibold text-gray-900">
-                                                Select Your Car
-                                            </h3>
-                                            <p className="text-sm text-gray-500">
-                                                Choose Year, Make, Model & Version
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => setShowCarPopup(false)}
-                                            className="w-10 h-10 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-
-                                    {/* Body - Multi Column Layout */}
-                                    <div className="flex-1 overflow-y-auto p-6">
-                                        <div className="grid grid-cols-5 gap-4">
-                                            {/* Column 1: Year Selection */}
-                                            <div className="flex flex-col">
-                                                <div className="mb-4">
-                                                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Year</h4>
-                                                    <p className="text-sm text-gray-600">Select year</p>
-                                                </div>
-                                                <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                                                    {YEARS.map((year) => (
-                                                        <button
-                                                            key={year}
-                                                            onClick={() => {
-                                                                setCarInfo(prev => ({
-                                                                    ...prev,
-                                                                    year: year,
-                                                                    make_id: null,
-                                                                    make_name: "",
-                                                                    model_id: null,
-                                                                    model_name: "",
-                                                                    version_id: null,
-                                                                    version_name: "",
-                                                                }));
-                                                            }}
-                                                            className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${
-                                                                carInfo.year === year
-                                                                    ? 'border-blue-600 bg-blue-50 text-blue-900'
-                                                                    : 'border-gray-200 hover:border-blue-400 text-gray-700'
-                                                            }`}
-                                                        >
-                                                            {year}
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                    {/* Large Screen: Premium Selection Layout */}
+                                    <div className="flex-1 flex flex-col min-h-0 bg-linear-to-b from-gray-50 to-white">
+                                        {/* Header */}
+                                        <div className="flex justify-between items-center bg-white border-b border-gray-100 p-6 shadow-xs">
+                                            <div>
+                                                <h3 className="text-2xl font-black text-gray-900 tracking-tight">
+                                                    Build Your <span className="text-blue-600">Comparison</span>
+                                                </h3>
+                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                                    Step 1-4: Select Vehicle Details
+                                                </p>
                                             </div>
+                                            <button
+                                                onClick={() => setShowCarPopup(false)}
+                                                className="w-12 h-12 rounded-full border border-gray-100 hover:bg-gray-100 flex items-center justify-center transition-all bg-white shadow-sm"
+                                            >
+                                                <X size={20} className="text-gray-400" />
+                                            </button>
+                                        </div>
 
-                                            {/* Column 2: Make Selection */}
-                                            {carInfo.year && (
-                                                <div className="flex flex-col">
-                                                    <div className="mb-4">
-                                                        <h4 className="text-lg font-semibold text-gray-900 mb-1">Make</h4>
-                                                        <p className="text-sm text-gray-600">Select brand</p>
+                                        <div className="flex-1 min-h-0 overflow-hidden p-8">
+                                            <div className="grid grid-cols-5 gap-8 h-full min-h-0">
+                                                {/* Column 1: Year */}
+                                                <div className="flex flex-col h-full min-h-0">
+                                                    <div className="mb-6">
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-black mb-3">1</div>
+                                                        <h4 className="text-lg font-black text-gray-900 leading-tight">Model Year</h4>
+                                                        <div className="h-1 w-8 bg-blue-600 rounded-full mt-2"></div>
                                                     </div>
-                                                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                                                        {makes.map((make) => (
+                                                    <div className="flex-1 overflow-y-auto pr-3 space-y-2 custom-scrollbar">
+                                                        {YEARS.map((year) => (
                                                             <button
-                                                                key={make.id}
-                                                                onClick={() => handleSelectMake(make.id)}
-                                                                className={`w-full px-3 py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
-                                                                    carInfo.make_id === make.id
-                                                                        ? 'border-blue-600 bg-blue-50'
-                                                                        : 'border-gray-200 hover:border-blue-400'
-                                                                }`}
+                                                                key={year}
+                                                                onClick={() => {
+                                                                    setCarInfo(prev => ({
+                                                                        ...prev,
+                                                                        year: year,
+                                                                        make_id: null,
+                                                                        make_name: "",
+                                                                        model_id: null,
+                                                                        model_name: "",
+                                                                        version_id: null,
+                                                                        version_name: "",
+                                                                    }));
+                                                                }}
+                                                                className={`w-full px-4 py-3 rounded-xl border-2 transition-all text-left font-bold text-sm ${carInfo.year === year
+                                                                    ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-md'
+                                                                    : 'border-white bg-white hover:border-gray-200 text-gray-500 hover:text-gray-900 shadow-sm'
+                                                                    }`}
                                                             >
-                                                                {make.logo && (
-                                                                    <img src={make.logo} alt={make.name} className="w-6 h-6 object-contain" />
-                                                                )}
-                                                                <span className={`font-medium text-sm ${carInfo.make_id === make.id ? 'text-blue-900' : 'text-gray-700'}`}>
-                                                                    {make.name}
-                                                                </span>
+                                                                {year}
                                                             </button>
                                                         ))}
                                                     </div>
                                                 </div>
-                                            )}
 
-                                            {/* Column 3: Model Selection */}
-                                            {carInfo.make_id && (
-                                                <div className="flex flex-col">
-                                                    <div className="mb-4">
-                                                        <h4 className="text-lg font-semibold text-gray-900 mb-1">Model</h4>
-                                                        <p className="text-sm text-gray-600">Select model</p>
+                                                {/* Column 2: Make */}
+                                                <div className="flex flex-col h-full min-h-0 bg-white/50 rounded-2xl p-1">
+                                                    <div className="p-3 mb-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center text-xs font-black mb-3 group-data-[active=true]:bg-blue-600 group-data-[active=true]:text-white transition-colors">2</div>
+                                                        <h4 className="text-lg font-black text-gray-300 data-[active=true]:text-gray-900 transition-colors" data-active={!!carInfo.year}>Manufacturer</h4>
                                                     </div>
-                                                    {isLoadingModels ? (
-                                                        <div className="flex items-center justify-center py-8">
-                                                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                                                            {models.map((model) => (
+                                                    <div className="flex-1 overflow-y-auto pr-3 space-y-2 custom-scrollbar opacity-50 data-[active=true]:opacity-100 transition-opacity" data-active={!!carInfo.year}>
+                                                        {carInfo.year && makes.map((make) => (
+                                                            <button
+                                                                key={make.id}
+                                                                onClick={() => handleSelectMake(make.id)}
+                                                                className={`w-full px-4 py-3 rounded-xl border-2 transition-all flex items-center gap-3 ${carInfo.make_id === make.id
+                                                                    ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-md'
+                                                                    : 'border-white bg-white hover:border-gray-200 text-gray-500 hover:text-gray-900 shadow-sm'
+                                                                    }`}
+                                                            >
+                                                                {make.logo && (
+                                                                    <img src={make.logo} alt={make.name} className="w-6 h-6 object-contain grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
+                                                                )}
+                                                                <span className="font-bold text-sm truncate">{getStringFromValue(make.name)}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Column 3: Model */}
+                                                <div className="flex flex-col h-full min-h-0">
+                                                    <div className="p-3 mb-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center text-xs font-black mb-3">3</div>
+                                                        <h4 className="text-lg font-black text-gray-300 data-[active=true]:text-gray-900 transition-colors" data-active={!!carInfo.make_id}>Model</h4>
+                                                    </div>
+                                                    <div className="flex-1 overflow-y-auto pr-3 space-y-2 custom-scrollbar opacity-50 data-[active=true]:opacity-100 transition-opacity" data-active={!!carInfo.make_id}>
+                                                        {carInfo.make_id && (
+                                                            isLoadingModels ? (
+                                                                <div className="flex items-center justify-center py-8">
+                                                                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                                </div>
+                                                            ) : models.map((model) => (
                                                                 <button
                                                                     key={model.id}
                                                                     onClick={() => handleSelectModel(model.id)}
-                                                                    className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${
-                                                                        carInfo.model_id === model.id
-                                                                            ? 'border-blue-600 bg-blue-50 text-blue-900'
-                                                                            : 'border-gray-200 hover:border-blue-400 text-gray-700'
-                                                                    }`}
+                                                                    className={`w-full px-4 py-3 rounded-xl border-2 transition-all text-left font-bold text-sm ${carInfo.model_id === model.id
+                                                                        ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-md'
+                                                                        : 'border-white bg-white hover:border-gray-200 text-gray-500 hover:text-gray-900 shadow-sm'
+                                                                        }`}
                                                                 >
-                                                                    {model.name}
+                                                                    {getStringFromValue(model.name)}
                                                                 </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Column 4: Version Selection */}
-                                            {carInfo.model_id && (
-                                                <div className="flex flex-col">
-                                                    <div className="mb-4">
-                                                        <h4 className="text-lg font-semibold text-gray-900 mb-1">Version</h4>
-                                                        <p className="text-sm text-gray-600">Select version</p>
+                                                            ))
+                                                        )}
                                                     </div>
-                                                    {isLoadingVersions ? (
-                                                        <div className="flex items-center justify-center py-8">
-                                                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                                                            {versions.map((version) => (
+                                                </div>
+
+                                                {/* Column 4: Version */}
+                                                <div className="flex flex-col h-full min-h-0 bg-white/50 rounded-2xl p-1">
+                                                    <div className="p-3 mb-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-gray-100 text-gray-400 flex items-center justify-center text-xs font-black mb-3">4</div>
+                                                        <h4 className="text-lg font-black text-gray-300 data-[active=true]:text-gray-900 transition-colors" data-active={!!carInfo.model_id}>Variant</h4>
+                                                    </div>
+                                                    <div className="flex-1 overflow-y-auto pr-3 space-y-2 custom-scrollbar opacity-50 data-[active=true]:opacity-100 transition-opacity" data-active={!!carInfo.model_id}>
+                                                        {carInfo.model_id && (
+                                                            isLoadingVersions ? (
+                                                                <div className="flex items-center justify-center py-8">
+                                                                    <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                                                </div>
+                                                            ) : versions.map((version) => (
                                                                 <button
                                                                     key={version.id}
                                                                     onClick={() => {
@@ -943,61 +966,62 @@ export default function CompareCarsPage() {
                                                                             year: version.year || prev.year,
                                                                         }));
                                                                     }}
-                                                                    className={`w-full px-3 py-2 rounded-lg border-2 transition-all text-left font-medium text-sm ${
-                                                                        carInfo.version_id === version.id
-                                                                            ? 'border-blue-600 bg-blue-50 text-blue-900'
-                                                                            : 'border-gray-200 hover:border-blue-400 text-gray-700'
-                                                                    }`}
+                                                                    className={`w-full px-4 py-3 rounded-xl border-2 transition-all text-left ${carInfo.version_id === version.id
+                                                                        ? 'border-blue-600 bg-blue-50 text-blue-900 shadow-md'
+                                                                        : 'border-white bg-white hover:border-gray-200 text-gray-500 hover:text-gray-900 shadow-sm'
+                                                                        }`}
                                                                 >
-                                                                    <div>{version.name}</div>
-                                                                    <div className="text-xs text-gray-600 font-normal">{version.cc} CC</div>
+                                                                    <div className="font-extrabold text-sm">{getStringFromValue(version.name)}</div>
+                                                                    <div className="text-[10px] text-gray-400 font-black uppercase mt-1">{version.cc} CC • {getStringFromValue(version.engine_type)}</div>
                                                                 </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
+                                                            ))
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            )}
 
-                                            {/* Column 5: Summary & Confirm */}
-                                            {carInfo.version_id && (
-                                                <div className="flex flex-col">
-                                                    <div className="mb-4">
-                                                        <h4 className="text-lg font-semibold text-gray-900 mb-1">Summary</h4>
-                                                        <p className="text-sm text-gray-600">Confirm</p>
+                                                {/* Column 5: Summary */}
+                                                <div className="flex flex-col h-full">
+                                                    <div className="p-3 mb-3 text-center">
+                                                        <div className="inline-flex w-8 h-8 rounded-lg bg-green-500 text-white items-center justify-center text-xs font-black mb-3">✓</div>
+                                                        <h4 className="text-lg font-black text-gray-900 leading-tight">Summary</h4>
                                                     </div>
-                                                    <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-200 grow flex flex-col">
-                                                        <div className="space-y-3 grow">
-                                                            <div className="border-b border-blue-200 pb-2">
-                                                                <div className="text-xs text-gray-600 font-medium">YEAR</div>
-                                                                <div className="text-sm font-semibold text-gray-900">{carInfo.year}</div>
+                                                    <div className="flex-1 flex flex-col opacity-50 data-[active=true]:opacity-100 transition-opacity" data-active={!!carInfo.version_id}>
+                                                        <div className="bg-linear-to-br from-blue-600 to-indigo-700 rounded-3xl p-6 text-white shadow-xl flex-1 flex flex-col">
+                                                            <div className="flex-1 space-y-6">
+                                                                <div className="space-y-1">
+                                                                    <div className="text-[10px] font-black uppercase text-blue-200 tracking-[0.2em]">Manufacturer</div>
+                                                                    <div className="text-lg font-extrabold leading-none">{getStringFromValue(carInfo.make_name) || '...'}</div>
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <div className="text-[10px] font-black uppercase text-blue-200 tracking-[0.2em]">Vehicle Model</div>
+                                                                    <div className="text-lg font-extrabold leading-none">{getStringFromValue(carInfo.model_name) || '...'}</div>
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <div className="text-[10px] font-black uppercase text-blue-200 tracking-[0.2em]">Selected Variant</div>
+                                                                    <div className="text-lg font-extrabold leading-none">{getStringFromValue(carInfo.version_name) || '...'}</div>
+                                                                </div>
+                                                                <div className="pt-4 border-t border-white/10 flex items-baseline gap-2">
+                                                                    <span className="text-3xl font-black">{carInfo.year || '----'}</span>
+                                                                    <span className="text-xs font-bold text-blue-300 uppercase">Model Year</span>
+                                                                </div>
                                                             </div>
-                                                            <div className="border-b border-blue-200 pb-2">
-                                                                <div className="text-xs text-gray-600 font-medium">MAKE</div>
-                                                                <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.make_name}</div>
-                                                            </div>
-                                                            <div className="border-b border-blue-200 pb-2">
-                                                                <div className="text-xs text-gray-600 font-medium">MODEL</div>
-                                                                <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.model_name}</div>
-                                                            </div>
-                                                            <div className="pb-2">
-                                                                <div className="text-xs text-gray-600 font-medium">VERSION</div>
-                                                                <div className="text-sm font-semibold text-gray-900 truncate">{carInfo.version_name}</div>
-                                                            </div>
+                                                            <button
+                                                                disabled={!carInfo.version_id}
+                                                                onClick={() => {
+                                                                    const selectedVersion = versions.find(v => v.id === carInfo.version_id);
+                                                                    if (selectedVersion) {
+                                                                        handleSelectVersion(selectedVersion);
+                                                                    }
+                                                                }}
+                                                                className="w-full mt-6 bg-white text-blue-600 py-4 rounded-2xl font-black text-sm hover:bg-blue-50 transition-all shadow-lg active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed group flex items-center justify-center gap-2"
+                                                            >
+                                                                Add to Compare
+                                                                <CheckCircle2 size={18} className="transition-transform group-hover:scale-110" />
+                                                            </button>
                                                         </div>
-                                                        <button
-                                                            onClick={() => {
-                                                                const selectedVersion = versions.find(v => v.id === carInfo.version_id);
-                                                                if (selectedVersion) {
-                                                                    handleSelectVersion(selectedVersion);
-                                                                }
-                                                            }}
-                                                            className="w-full mt-4 bg-linear-to-r from-blue-600 to-blue-500 text-white py-2 rounded-lg font-semibold text-sm hover:from-blue-700 hover:to-blue-600 transition-all"
-                                                        >
-                                                            ✓ Confirm
-                                                        </button>
                                                     </div>
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                     </div>
                                 </>
@@ -1021,7 +1045,7 @@ interface StepGridProps<T = any> {
     isMakeStep?: boolean;
 }
 
-function StepGrid<T = any>({ title, subtitle, data, onSelect, isMakeStep = false }: StepGridProps<T>) {
+function StepGrid<T = any>({ title, subtitle, data, onSelect, onBack, isMakeStep = false }: StepGridProps<T>) {
     const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
     const handleImageError = (itemId: string) => {
@@ -1029,48 +1053,70 @@ function StepGrid<T = any>({ title, subtitle, data, onSelect, isMakeStep = false
     };
 
     return (
-        <>
-            <div className="mb-6">
-                <h4 className="text-2xl font-semibold text-gray-900 mb-1">{title}</h4>
-                {subtitle && <p className="text-gray-600 text-sm">{subtitle}</p>}
+        <div className="flex flex-col h-full">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
+                <div className="flex items-center gap-4">
+                    {onBack && (
+                        <button
+                            onClick={onBack}
+                            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                            <ChevronLeft size={20} className="text-gray-600" />
+                        </button>
+                    )}
+                    <div>
+                        <h4 className="text-xl font-black text-gray-900 leading-tight">{title}</h4>
+                        {subtitle && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{subtitle}</p>}
+                    </div>
+                </div>
+                {!onBack && <div className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black uppercase rounded-full">Select One</div>}
             </div>
 
-            <div className={`${isMakeStep ? 'grid grid-cols-2 gap-4 overflow-y-auto max-h-[60vh]' : 'flex flex-col space-y-3 overflow-y-auto max-h-[60vh] pr-2'}`}>
-                {Array.isArray(data) && data.map((item: any) => {
-                    const displayText = typeof item === 'object' && item !== null && 'name' in item ? item.name : String(item);
-                    const logoUrl = isMakeStep && item.logo ? item.logo : null;
-                    const itemKey = String(item.id ?? item);
-                    const imageFailed = failedImages.has(itemKey);
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <div className={`${isMakeStep ? 'grid grid-cols-2 gap-3 pb-6' : 'flex flex-col gap-2 pb-6'}`}>
+                    {Array.isArray(data) && data.map((item: any) => {
+                        const displayText = getStringFromValue(item);
+                        const logoUrl = isMakeStep && item.logo ? item.logo : null;
+                        const itemKey = String(item.id ?? item);
+                        const imageFailed = failedImages.has(itemKey);
 
-                    return (
-                        <button
-                            key={itemKey}
-                            onClick={() => onSelect(item)}
-                            className={`rounded-xl p-4 text-left hover:border-blue-600 hover:bg-blue-50 hover:shadow-md transition-all active:scale-[0.98] border-2 border-gray-200 ${isMakeStep ? 'flex flex-col items-center justify-center h-36' : 'w-full'}`}
-                        >
-                            {logoUrl && !imageFailed ? (
-                                <>
-                                    <img
-                                        src={logoUrl}
-                                        alt={displayText}
-                                        className="h-12 w-12 object-contain mb-2"
-                                        onError={() => handleImageError(itemKey)}
-                                    />
-                                    <div className="text-center">
-                                        <div className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                        return (
+                            <button
+                                key={itemKey}
+                                onClick={() => onSelect(item)}
+                                className={`rounded-2xl p-4 text-left hover:border-blue-600 hover:bg-blue-50 transition-all border-2 border-gray-100 bg-white group shadow-sm active:scale-[0.98] ${isMakeStep ? 'flex flex-col items-center justify-center min-h-[120px]' : 'w-full flex items-center justify-between'
+                                    }`}
+                            >
+                                {logoUrl && !imageFailed ? (
+                                    <>
+                                        <div className="h-16 w-full flex items-center justify-center mb-3">
+                                            <img
+                                                src={logoUrl}
+                                                alt={displayText}
+                                                className="h-12 w-12 object-contain group-hover:scale-110 transition-transform"
+                                                onError={() => handleImageError(itemKey)}
+                                            />
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-xs font-black text-gray-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">
+                                                {displayText}
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-sm font-black text-gray-900 group-hover:text-blue-600 transition-colors">
                                             {displayText}
                                         </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="text-lg font-medium text-gray-900 hover:text-blue-600 transition-colors">
-                                    {displayText}
-                                </div>
-                            )}
-                        </button>
-                    );
-                })}
+                                        {!isMakeStep && <ArrowLeftRight size={14} className="text-gray-200 group-hover:text-blue-400" />}
+                                    </>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
-        </>
+        </div>
     );
 }
+
