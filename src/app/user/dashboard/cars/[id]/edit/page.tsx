@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { getMySellCar, updateMySellCar } from "@/src/services/adminSellCar.service";
 import { ArrowLeft, Upload, Trash2, Save, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { getImageUrl } from "@/src/utils/imageUtils";
 
 interface SellCar {
   id: number;
@@ -142,7 +143,7 @@ export default function EditSellCarPage() {
 
       await updateMySellCar(Number(id), fd);
       setSuccess("Car updated successfully!");
-      
+
       setTimeout(() => {
         router.push("/user/dashboard/cars/all");
       }, 2000);
@@ -436,7 +437,7 @@ export default function EditSellCarPage() {
                     {formData.media.map((image) => (
                       <div key={image.id} className="relative group">
                         <img
-                          src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${image.image || image.media_path}`}
+                          src={getImageUrl(image.image || image.media_path)}
                           alt="Car"
                           className="w-full h-32 object-cover rounded-lg"
                         />

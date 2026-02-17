@@ -9,6 +9,7 @@ import Navbar from "@/src/components/Navbar";
 import Footer from "@/src/components/Footer";
 import apiClient from "@/src/lib/api/apiClient";
 import carDummy from "@/src/assets/images/car2.png";
+import { getImageUrl } from "@/src/utils/imageUtils";
 import {
   MapPin,
   Gauge,
@@ -897,7 +898,7 @@ const AllCars: React.FC = () => {
                       <Image
                         src={
                           car.images && car.images.length > 0
-                            ? `${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.images[0]}`
+                            ? getImageUrl(car.images[0])
                             : DUMMY_IMAGE
                         }
                         alt={`${car.make} ${car.model}`}

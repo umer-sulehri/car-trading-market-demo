@@ -1,4 +1,6 @@
 import apiClient from "@/src/lib/api/apiClient";
+import carDummy from "@/src/assets/images/car2.png";
+import { getImageUrl } from "@/src/utils/imageUtils";
 import { GET } from "@/src/lib/api/get.service";
 import { PUT } from "@/src/lib/api/put.service";
 import { POST } from "@/src/lib/api/post.service";
@@ -74,10 +76,12 @@ export const getFeatures = (): Promise<Feature[]> =>
   GET<Feature[]>(API.admin.features);
 
 
-export const createFeature = (data: {  name: string;
+export const createFeature = (data: {
+  name: string;
   car_feature_type_id: number;
   is_visible: boolean;
-  value?: string; }) =>
+  value?: string;
+}) =>
   POST(API.admin.features, data);
 
 export const deleteFeature = (id: number) =>
@@ -200,13 +204,11 @@ export const getPublicVersionSpecifications = (versionId: number) =>
 export const getPublicMakes = (): Promise<Make[]> => {
   return GET<any>("/makes").then((res) => {
     const makes = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
-    
+
     // Convert logo paths to full URLs
     return makes.map((make: Make) => ({
       ...make,
-      logo: make.logo 
-        ? `${process.env.NEXT_PUBLIC_STORAGE_URL}/${make.logo}`
-        : undefined
+      logo: getImageUrl(make.logo)
     }));
   });
 };

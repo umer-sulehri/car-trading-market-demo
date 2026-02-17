@@ -14,6 +14,7 @@ import {
   DollarSign, Car, FileText, Settings, MessageSquare, Heart, Trash2, MapPin, Gauge, Star, Sparkles
 } from "lucide-react";
 import Link from "next/link";
+import { getImageUrl } from "@/src/utils/imageUtils";
 
 interface SellCar {
   id: number;
@@ -253,7 +254,7 @@ export default function DashboardPage() {
                 <div className="relative h-48 bg-gray-200 overflow-hidden">
                   {car.media && car.media[0] ? (
                     <img
-                      src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.media[0].image || car.media[0].media_path}`}
+                      src={getImageUrl(car.media[0].image || car.media[0].media_path)}
                       alt={`${car.make?.name} ${car.version?.name}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -417,7 +418,7 @@ export default function DashboardPage() {
                 <div className="relative h-48 bg-gray-200 overflow-hidden">
                   {car.images && car.images.length > 0 ? (
                     <Image
-                      src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.images[0]}`}
+                      src={getImageUrl(car.images[0])}
                       alt={`${car.make?.name}`}
                       fill
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"

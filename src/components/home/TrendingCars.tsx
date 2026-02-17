@@ -6,6 +6,7 @@ import Image from "next/image";
 import { User, Zap, Settings, MapPin, Star } from "lucide-react";
 import { featuredCarsAPI } from "@/src/services/featuredCarsAPI";
 import { assets } from "@/src/assets/js/assets";
+import { getImageUrl } from "@/src/utils/imageUtils";
 
 interface FeaturedListing {
   id: number;
@@ -85,10 +86,7 @@ const TrendingCars: FC = () => {
               >
                 <div className="h-48 w-full relative">
                   <Image
-                    src={listing.car.media?.[0]?.image
-                      ? `${process.env.NEXT_PUBLIC_STORAGE_URL}/${listing.car.media[0].image}`
-                      : assets.car1 // Fallback
-                    }
+                    src={getImageUrl(listing.car.media?.[0]?.image) || assets.car1}
                     alt={listing.car.title}
                     className="h-full w-full object-cover hover:scale-105 transition duration-500"
                     width={400}

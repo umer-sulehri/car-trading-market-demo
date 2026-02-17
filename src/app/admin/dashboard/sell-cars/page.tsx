@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAdminSellCars, updateSellCarStatus } from "@/src/services/adminSellCar.service";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
+import { getImageUrl } from "@/src/utils/imageUtils";
 
 const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Crect fill='%23e5e7eb' width='300' height='200'/%3E%3Ctext x='50%25' y='50%25' font-size='16' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'%3ENo Image Available%3C/text%3E%3C/svg%3E";
 
@@ -46,7 +47,7 @@ export default function AdminSellCarsPage() {
   const handleStatusUpdate = async (id: number, status: "approved" | "rejected" | "pending") => {
     try {
       await updateSellCarStatus(id, status);
-      setSellCars(sellCars.map(car => 
+      setSellCars(sellCars.map(car =>
         car.id === id ? { ...car, status } : car
       ));
       alert(`Listing ${status}!`);
@@ -81,11 +82,10 @@ export default function AdminSellCarsPage() {
           <button
             key={status}
             onClick={() => setFilter(status)}
-            className={`px-4 py-2 font-medium capitalize transition-colors ${
-              filter === status
+            className={`px-4 py-2 font-medium capitalize transition-colors ${filter === status
                 ? "border-b-2 border-blue-600 text-blue-600"
                 : "text-gray-600 hover:text-gray-900"
-            }`}
+              }`}
           >
             {status}
           </button>
@@ -105,7 +105,7 @@ export default function AdminSellCarsPage() {
                 <div>
                   {car.media && car.media[0] ? (
                     <img
-                      src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.media[0].image || car.media[0].media_path}`}
+                      src={getImageUrl(car.media[0].image || car.media[0].media_path)}
                       alt={`${car.make?.name} ${car.version?.name}`}
                       className="w-full h-40 object-cover rounded-lg"
                       onError={(e) => {

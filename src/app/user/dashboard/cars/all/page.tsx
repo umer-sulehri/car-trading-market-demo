@@ -6,6 +6,7 @@ import { featuredCarsAPI } from "@/src/services/featuredCarsAPI";
 import { CheckCircle, Clock, XCircle, MapPin, Gauge, Star, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getImageUrl } from "@/src/utils/imageUtils";
 
 interface SellCar {
   id: number;
@@ -221,7 +222,7 @@ export default function AllCarsPage() {
               <div className="relative h-48 bg-gray-100 overflow-hidden">
                 {car.media && car.media[0] ? (
                   <img
-                    src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.media[0].image || car.media[0].media_path}`}
+                    src={getImageUrl(car.media[0].image || car.media[0].media_path)}
                     alt={`${car.make?.name} ${car.version?.name}`}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                     onError={(e) => {
@@ -330,7 +331,7 @@ export default function AllCarsPage() {
                     <div className="flex items-center gap-4">
                       {car.media && car.media[0] ? (
                         <img
-                          src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.media[0].image || car.media[0].media_path}`}
+                          src={getImageUrl(car.media[0].image || car.media[0].media_path)}
                           alt={`${car.make?.name} ${car.version?.name}`}
                           className="w-20 h-20 object-cover rounded-lg"
                           onError={(e) => {

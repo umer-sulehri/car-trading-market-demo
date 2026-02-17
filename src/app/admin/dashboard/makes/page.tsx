@@ -6,6 +6,7 @@ import {
   createMake,
   deleteMake,
 } from "@/src/services/admin.lookup.service";
+import { getImageUrl } from "@/src/utils/imageUtils";
 
 interface Make {
   id: number;
@@ -97,9 +98,8 @@ export default function MakesPage() {
         <button
           onClick={handleCreate}
           disabled={creating}
-          className={`px-4 py-2 rounded text-white ${
-            creating ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
-          }`}
+          className={`px-4 py-2 rounded text-white ${creating ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
+            }`}
         >
           {creating ? "Adding..." : "Add"}
         </button>
@@ -120,10 +120,7 @@ export default function MakesPage() {
               <div className="flex items-center gap-3">
                 {make.logo && (
                   <img
-                    src={`${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(
-                      "/api",
-                      ""
-                    )}/storage/${make.logo}`}
+                    src={getImageUrl(make.logo)}
                     alt={make.name}
                     className="w-8 h-8 object-contain"
                   />

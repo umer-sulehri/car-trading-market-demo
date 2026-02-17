@@ -8,14 +8,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, MapPin, Gauge, DollarSign, Trash2, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { getImageUrl } from "@/src/utils/imageUtils";
 
 interface FavoriteCar {
   id: number;
   make?: { id: number; name: string };
-  version?: { 
-    id: number; 
-    name: string; 
-    model?: { id: number; name: string } 
+  version?: {
+    id: number;
+    name: string;
+    model?: { id: number; name: string }
   };
   city?: { id: number; name: string };
   mileage: number;
@@ -78,8 +79,8 @@ export default function MyFavoritesPage() {
               <div>
                 <h1 className="text-4xl font-bold text-gray-900">My Favorite Cars</h1>
                 <p className="text-gray-600 mt-1">
-                  {favoriteCars.length === 0 
-                    ? "You haven't saved any favorite cars yet" 
+                  {favoriteCars.length === 0
+                    ? "You haven't saved any favorite cars yet"
                     : `You have saved ${favoriteCars.length} car${favoriteCars.length !== 1 ? 's' : ''}`}
                 </p>
               </div>
@@ -134,7 +135,7 @@ export default function MyFavoritesPage() {
                     {/* Image Container */}
                     <div className="relative h-56 bg-gray-200 overflow-hidden">
                       <Image
-                      src={`${process.env.NEXT_PUBLIC_STORAGE_URL}/${car.media?.[0]?.image || car.media?.[0]?.media_path || PLACEHOLDER_IMAGE}`}
+                        src={getImageUrl(car.media?.[0]?.image || car.media?.[0]?.media_path) || PLACEHOLDER_IMAGE}
 
                         alt={`${makeName} ${versionName}`}
                         fill
@@ -143,7 +144,7 @@ export default function MyFavoritesPage() {
                           (e.target as HTMLImageElement).src = PLACEHOLDER_IMAGE;
                         }}
                       />
-                      
+
                       {/* Favorite Badge */}
                       <div className="absolute top-4 right-4 bg-white/90 backdrop-blur rounded-full p-2 shadow-md">
                         <Heart className="w-6 h-6 text-red-600 fill-red-600" />

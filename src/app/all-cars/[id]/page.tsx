@@ -10,6 +10,7 @@ import carDummy from "@/src/assets/images/car2.png";
 import logo from "@/src/assets/images/logo.svg";
 import { submitBuyerQuery } from "@/src/services/buyer.service";
 import { addToFavorites, removeFromFavorites, checkIfFavorited } from "@/src/services/favorite.service";
+import { getImageUrl } from "@/src/utils/imageUtils";
 
 import {
   MapPin,
@@ -86,7 +87,7 @@ export default function CarDetailsPage() {
       setCar(mappedCar);
       setActiveImage(
         mappedCar.images?.length
-          ? `${process.env.NEXT_PUBLIC_STORAGE_URL}/${mappedCar.images[0]}`
+          ? getImageUrl(mappedCar.images[0])
           : carDummy.src
       );
 
@@ -198,7 +199,7 @@ export default function CarDetailsPage() {
               {/* Thumbnail Gallery */}
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {car.images?.map((img: string, index: number) => {
-                  const src = `${process.env.NEXT_PUBLIC_STORAGE_URL}/${img}`;
+                  const src = getImageUrl(img);
                   return (
                     <button
                       key={index}
@@ -421,9 +422,8 @@ const SellerPhone = ({ phone }: { phone: string }) => {
 };
 
 const MessageBox = ({ car }: { car: any }) => {
-  const defaultMessage = `Hi, I am interested in your ${car.make?.name || "car"} ${
-    car.version?.model?.name || ""
-  } advertised on Car Trading Market. Please let me know if it's still available. Thanks`;
+  const defaultMessage = `Hi, I am interested in your ${car.make?.name || "car"} ${car.version?.model?.name || ""
+    } advertised on Car Trading Market. Please let me know if it's still available. Thanks`;
 
   const [formData, setFormData] = useState({
     buyer_name: "",
