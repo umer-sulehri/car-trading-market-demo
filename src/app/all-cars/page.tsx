@@ -19,7 +19,10 @@ import {
   Heart,
   ChevronDown,
   Star,
+  Search,
+  Filter,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { addToFavorites, removeFromFavorites, getFavoriteCars } from "@/src/services/favorite.service";
 import { isUserAuthenticated } from "@/src/lib/auth/cookie.utils";
 
@@ -48,6 +51,7 @@ interface SellCar {
   images?: string[];
   media?: Array<{ image: string }>;
   user_id?: number;
+  is_managed?: boolean;
   featured_listing?: {
     id: number;
     plan: {
@@ -79,6 +83,8 @@ const AllCars: React.FC = () => {
   const [registeredInFilter, setRegisteredInFilter] = useState("");
   const [favorited, setFavorited] = useState<Set<number>>(new Set());
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [managedFilter, setManagedFilter] = useState(false);
+  const searchParams = useSearchParams();
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
@@ -129,9 +135,13 @@ const AllCars: React.FC = () => {
   ];
 
   useEffect(() => {
+    const managedParam = searchParams.get("managed");
+    if (managedParam === "1") {
+      setManagedFilter(true);
+    }
     fetchApprovedCars();
     loadFavorites();
-  }, []);
+  }, [searchParams]);
 
   const loadFavorites = async () => {
     try {
@@ -176,7 +186,13 @@ const AllCars: React.FC = () => {
         }));
 
       setCars(approvedCars);
-      setFilteredCars(approvedCars);
+
+      const managedParam = searchParams.get("managed");
+      if (managedParam === "1") {
+        setFilteredCars(approvedCars.filter(c => c.is_managed));
+      } else {
+        setFilteredCars(approvedCars);
+      }
     } catch (error) {
       console.error("Error fetching cars:", error);
     } finally {
@@ -877,6 +893,12 @@ const AllCars: React.FC = () => {
                       {car.featured_listing?.plan?.urgent_badge && (
                         <div className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg">
                           URGENT
+                        </div>
+                      )}
+                      {car.is_managed && (
+                        <div className="bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg flex items-center gap-1">
+                          <ShieldCheck size={12} fill="currentColor" />
+                          MANAGED
                         </div>
                       )}
                     </div>

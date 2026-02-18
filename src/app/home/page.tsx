@@ -16,6 +16,8 @@ import FAQ from "@/src/components/home/FAQ";
 import FinalCTA from "@/src/components/home/FinalCTA";
 import PlatformStats from "@/src/components/home/PlatformStats";
 import WhyChooseUs from "@/src/components/home/WhyChooseUs";
+import SellOptions from "@/src/components/home/SellOptions";
+import ManagedSlider from "@/src/components/home/ManagedSlider";
 
 export const metadata: Metadata = generateSEOMetadata(getSEOConfig("home"));
 
@@ -24,6 +26,8 @@ const Home: FC = () => {
     <div className="transition-all duration-300">
       <Navbar />
       <Hero />
+      <SellOptions />
+      <ManagedSlider />
       <TrendingCars />
       <PlatformStats />
       <BrowseUsedCars />
@@ -34,8 +38,8 @@ const Home: FC = () => {
       <PopularBrands />
       <WhyChooseUs />
       <FeaturedDealers />
-      <SubscribeDeals/>
-       <FAQ />
+      <SubscribeDeals />
+      <FAQ />
       <Footer />
 
     </div>

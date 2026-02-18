@@ -49,3 +49,14 @@ export const removeFromFavorites = (sellCarId: number) => {
 export const checkIfFavorited = (sellCarId: number) => {
   return GET<{ isFavorited: boolean }>(`/favorite-cars/${sellCarId}/check`);
 };
+
+/**
+ * Toggle favorite status
+ */
+export const toggleFavorite = async (sellCarId: number, isCurrentlyFavorited: boolean) => {
+  if (isCurrentlyFavorited) {
+    return removeFromFavorites(sellCarId);
+  } else {
+    return addToFavorites(sellCarId);
+  }
+};

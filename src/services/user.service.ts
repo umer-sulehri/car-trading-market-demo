@@ -6,6 +6,7 @@ export interface AppUser {
   id: number;
   name: string;
   email: string;
+  phone?: string | null;
   profile?: string | null;
   created_at?: string;
 }

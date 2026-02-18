@@ -87,7 +87,7 @@ const TrendingCars: FC = () => {
                 <div className="h-48 w-full relative">
                   <Image
                     src={getImageUrl(listing.car.media?.[0]?.image) || assets.car1}
-                    alt={listing.car.title}
+                    alt={listing.car.title || "Featured Car"}
                     className="h-full w-full object-cover hover:scale-105 transition duration-500"
                     width={400}
                     height={250}

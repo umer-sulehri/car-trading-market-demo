@@ -17,6 +17,7 @@ import {
   Layers,
   Link as LinkIcon,
   ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -90,6 +91,11 @@ const AdminSidebar: React.FC = () => {
             href="/admin/dashboard/sell-cars"
             icon={<PlusCircle size={16} />}
             label="Sell Cars"
+          />
+          <SidebarItem
+            href="/admin/dashboard/managed-cars"
+            icon={<ShieldCheck size={16} />}
+            label="Managed Cars"
           />
         </SidebarSection>
 
@@ -281,11 +287,10 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ icon, label, href }) => {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition ${
-        isActive
-          ? "bg-blue-600 text-white font-medium"
-          : "text-gray-300 hover:bg-gray-700"
-      }`}
+      className={`flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg transition ${isActive
+        ? "bg-blue-600 text-white font-medium"
+        : "text-gray-300 hover:bg-gray-700"
+        }`}
     >
       {icon}
       <span>{label}</span>

@@ -29,17 +29,20 @@ apiClient.interceptors.response.use(
             withCredentials: true,
           });
 
-          queue.forEach((cb) => cb());
+          queue.forEach((cb) => cb.resolve(apiClient(originalRequest)));
           queue = [];
-        } catch {
-          window.location.href = "/auth/login";
+        } catch (error) {
+          queue.forEach((cb) => cb.reject(error));
+          queue = [];
+          // Only redirect if absolutely necessary, or just reject
+          // window.location.href = "/auth/login"; 
         } finally {
           isRefreshing = false;
         }
       }
 
-      return new Promise((resolve) => {
-        queue.push(() => resolve(apiClient(originalRequest)));
+      return new Promise((resolve, reject) => {
+        queue.push({ resolve, reject });
       });
     }
 

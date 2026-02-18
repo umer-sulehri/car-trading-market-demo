@@ -171,6 +171,13 @@ export default function CarDetailsPage() {
                   <div className="flex items-center gap-2 text-gray-500 mt-2">
                     <MapPin size={16} /> {car.city?.name || "City"}, {car.registered_city}
                   </div>
+
+                  {car.is_managed && (
+                    <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 rounded-full font-bold text-sm border border-orange-200">
+                      <ShieldCheck size={18} fill="currentColor" />
+                      MANAGED BY KAAR4U
+                    </div>
+                  )}
                 </div>
 
                 {/* Favorite Button */}

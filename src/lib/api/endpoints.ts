@@ -16,14 +16,14 @@ export const API = {
     myCars: "/my-cars",
 
     // user dashboard view / edit
-    byId: (id: number) => `/cars/${id}`, 
+    byId: (id: number) => `/cars/${id}`,
     // user dashboard edit
     update: (id: number) => `/cars/${id}`,
     // user dashboarddelete
     delete: (id: number) => `/cars/${id}`,
 
     //  public single car view
-    publicById: (id: number) => `/public/cars/${id}`, 
+    publicById: (id: number) => `/public/cars/${id}`,
   },
   admin: {
     //admin carr view / manage of all users
@@ -36,7 +36,7 @@ export const API = {
     sellCars: "/admin/sell-cars",
     // admin users list
     users: "/admin/users",
-  
+
     makes: "/admin/makes",
     models: "/admin/models",
     features: "/admin/features",
@@ -44,7 +44,7 @@ export const API = {
     cities: "/admin/cities",
     colors: "/admin/colors",
     bodyTypes: "/admin/body-types",
-   // new lookups
+    // new lookups
     engineTypes: "/engine-types",
     transmissions: "/transmissions",
 
@@ -73,7 +73,9 @@ export const API = {
     create: "/sell-car-media",
     delete: (id: number) => `/sell-car-media/${id}`,
   },
-
-  
-
+  managedCars: {
+    submit: "/managed-cars/submit",
+    adminList: "/admin/managed-cars",
+    publish: (id: number) => `/admin/managed-cars/${id}/publish`,
+  }
 };

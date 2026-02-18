@@ -32,20 +32,15 @@ export default function BrowseUsedCars() {
       try {
         let responseData: any[] = [];
 
-        // Create a timeout promise
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Request timeout")), 8000) // 8 second timeout
-        );
-
         switch (active) {
           case "city":
-            responseData = await Promise.race([getPublicCities(), timeoutPromise]) as any[];
+            responseData = await getPublicCities();
             break;
           case "make":
-            responseData = await Promise.race([getPublicMakes(), timeoutPromise]) as any[];
+            responseData = await getPublicMakes();
             break;
           case "bodyType":
-            responseData = await Promise.race([getPublicBodyTypes(), timeoutPromise]) as any[];
+            responseData = await getPublicBodyTypes();
             break;
           case "budget":
             responseData = BUDGETS.map((budget, idx) => ({
@@ -149,8 +144,8 @@ const CategoryTab = ({
   <button
     onClick={onClick}
     className={`px-5 py-2 rounded-full text-sm font-semibold transition
-      ${active 
-        ? "bg-blue-600 text-white shadow-md border border-blue-600" 
+      ${active
+        ? "bg-blue-600 text-white shadow-md border border-blue-600"
         : "bg-white text-gray-700 border border-gray-200 hover:bg-blue-50 hover:text-blue-600"}`}
   >
     {label}
