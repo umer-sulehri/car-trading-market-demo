@@ -45,7 +45,8 @@ const Navbar: FC = () => {
       <div className="max-w-7xl mx-auto px-6 lg:px-16 py-4 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center">
-          <Image src={assets.logo} alt="logo" className="h-10 w-auto" />
+          <Image src={assets.logo} alt="logo" className="h-16 w-auto" width={180}
+            height={60} />
         </Link>
 
         {/* Desktop Menu */}
@@ -54,11 +55,10 @@ const Navbar: FC = () => {
             <Link
               key={link.path}
               href={link.path}
-              className={`px-5 py-2 rounded-full transition-colors font-medium ${
-                pathname === link.path
-                  ? "bg-blue-100 text-blue-600"
-                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-              }`}
+              className={`px-5 py-2 rounded-full transition-colors font-medium ${pathname === link.path
+                ? "bg-blue-100 text-blue-600"
+                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                }`}
             >
               {link.name}
             </Link>
@@ -120,11 +120,10 @@ const Navbar: FC = () => {
             key={link.path}
             href={link.path}
             onClick={() => setOpen(false)}
-            className={`px-5 py-3 rounded-full text-lg font-medium transition-colors ${
-              pathname === link.path
-                ? "bg-blue-100 text-blue-600"
-                : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-            }`}
+            className={`px-5 py-3 rounded-full text-lg font-medium transition-colors ${pathname === link.path
+              ? "bg-blue-100 text-blue-600"
+              : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+              }`}
           >
             {link.name}
           </Link>

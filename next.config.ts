@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
         port: "8000",
         pathname: "/storage/**",
       },
+      {
+        protocol: "https",
+        hostname: "api.kaar4u.com",
+        pathname: "/storage/**",
+      },
     ],
     unoptimized: true, // for local dev, can remove in production
   },

@@ -7,7 +7,9 @@ async function forward(req: NextRequest, path: string[]) {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("access_token")?.value;
 
-  const url = new URL(`${API_BASE_URL}/${path.join("/")}`);
+  const url = new URL(`${API_BASE_URL?.replace(/\/$/, "")}/${path.join("/")}`);
+
+  console.log(`[Proxy] Forwarding to: ${url.toString()}`);
 
   // Forward query params
   req.nextUrl.searchParams.forEach((value, key) => {
@@ -56,13 +58,13 @@ export async function POST(
   const { path } = await context.params;
   try {
     const res = await forward(req, path);
-    
+
     if (res.status >= 400) {
       const text = await res.text();
       console.error(`[Proxy Error ${res.status}] POST ${path.join("/")}:`, text);
       return new NextResponse(text, { status: res.status, headers: res.headers });
     }
-    
+
     return new NextResponse(res.body, res);
   } catch (error) {
     console.error("Proxy POST error:", error);
@@ -77,14 +79,14 @@ export async function GET(
   const { path } = await context.params;
   try {
     const res = await forward(req, path);
-    
+
     // Log errors for debugging
     if (res.status >= 400) {
       const text = await res.text();
       console.error(`[Proxy Error ${res.status}] ${path.join("/")}:`, text);
       return new NextResponse(text, { status: res.status, headers: res.headers });
     }
-    
+
     return new NextResponse(res.body, res);
   } catch (error) {
     console.error("Proxy forward error:", error);
@@ -99,13 +101,13 @@ export async function PUT(
   const { path } = await context.params;
   try {
     const res = await forward(req, path);
-    
+
     if (res.status >= 400) {
       const text = await res.text();
       console.error(`[Proxy Error ${res.status}] PUT ${path.join("/")}:`, text);
       return new NextResponse(text, { status: res.status, headers: res.headers });
     }
-    
+
     return new NextResponse(res.body, res);
   } catch (error) {
     console.error("Proxy PUT error:", error);
@@ -120,13 +122,13 @@ export async function DELETE(
   const { path } = await context.params;
   try {
     const res = await forward(req, path);
-    
+
     if (res.status >= 400) {
       const text = await res.text();
       console.error(`[Proxy Error ${res.status}] DELETE ${path.join("/")}:`, text);
       return new NextResponse(text, { status: res.status, headers: res.headers });
     }
-    
+
     return new NextResponse(res.body, res);
   } catch (error) {
     console.error("Proxy DELETE error:", error);

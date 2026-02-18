@@ -3,7 +3,7 @@ import { StaticImageData } from "next/image";
 
 // Images
 import search_icon from "../images/search_icon.svg";
-import logo from "../images/logo.svg";
+import logo from "../images/kaar4u-logo.png";
 import main_car from "../images/main_car.png";
 import car from "../images/car.png";
 import car1 from "../images/car1.png";
@@ -72,7 +72,7 @@ export const menuLinks = [
   { name: "Browse Cars", path: "/all-cars" },
   { name: "New Cars", path: "/new-cars" },
   { name: "Sell Your Car", path: "/sell-car" },
-  
+
 ];
 
 export const ownerMenuLinks = [
